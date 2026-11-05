@@ -160,10 +160,54 @@ export async function importCjProduct(
     detail.productNameEn || detail.productName || detail.nameEn || detail.name || 'Prodotto Esclusivo CJ'
   );
   const productSku = String(detail.productSku || detail.sku || `CJ-${pid}`);
-  const productImage = String(detail.bigImage || detail.productImage || detail.image || '');
   const description = detail.description || productName;
 
   const rawVariants: any[] = detail.variants || detail.variantList || detail.stanList || [];
+
+  // Raccolta completa di tutte le immagini della galleria del prodotto
+  const collectedImages: string[] = [];
+  if (detail.bigImage) collectedImages.push(String(detail.bigImage));
+
+  // 1. Parsing di productImageSet (array di immagini)
+  if (Array.isArray(detail.productImageSet)) {
+    detail.productImageSet.forEach((img: any) => {
+      if (typeof img === 'string') collectedImages.push(img);
+    });
+  }
+
+  // 2. Parsing di productImage (può essere stringa JSON tipo '["https...", ...]' o array)
+  if (Array.isArray(detail.productImage)) {
+    detail.productImage.forEach((img: any) => {
+      if (typeof img === 'string') collectedImages.push(img);
+    });
+  } else if (typeof detail.productImage === 'string') {
+    const trimmed = detail.productImage.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((img: any) => {
+            if (typeof img === 'string') collectedImages.push(img);
+          });
+        }
+      } catch {}
+    } else if (trimmed.startsWith('http')) {
+      collectedImages.push(trimmed);
+    }
+  }
+
+  // 3. Immagini specifiche delle singole varianti
+  rawVariants.forEach((v: any) => {
+    if (v.variantImage && typeof v.variantImage === 'string') {
+      collectedImages.push(v.variantImage);
+    }
+  });
+
+  // Rimuove duplicati e stringhe non valide
+  const galleryImages = Array.from(
+    new Set(collectedImages.filter((url) => typeof url === 'string' && url.startsWith('http')))
+  );
+  const coverImage = galleryImages[0] || String(detail.bigImage || detail.productImage || '');
 
   const supabase = getAdminClient();
 
@@ -201,7 +245,8 @@ export async function importCjProduct(
     price: sellingPrice,
     cost_price: minCostPrice,
     markup_percentage: markupPercentage,
-    image_url: productImage,
+    image_url: coverImage,
+    images: galleryImages,
     stock: 100,
     category_id: categoryId || null,
     cj_product_id: pid,
@@ -253,7 +298,7 @@ export async function importCjProduct(
         v.variantSellPrice || v.variantPrice || v.price || v.sellPrice || minCostPrice
       );
       const vPrice = Number((cost * (1 + markupPercentage / 100)).toFixed(2));
-      const vImg = String(v.variantImage || v.bigImage || productImage);
+      const vImg = String(v.variantImage || v.bigImage || coverImage);
       const vWeight = Number(v.variantWeight || 0);
       const vSku = String(v.variantSku || v.sku || productSku);
       const stock = Number(v.inventoryNum || v.inventory || v.stock || 50);

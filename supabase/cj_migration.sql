@@ -45,6 +45,7 @@ ALTER TABLE public.products
     ADD COLUMN IF NOT EXISTS cj_product_sku TEXT,
     ADD COLUMN IF NOT EXISTS cost_price NUMERIC(10, 2),
     ADD COLUMN IF NOT EXISTS markup_percentage NUMERIC(6, 2) DEFAULT 40.00,
+    ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb,
     ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP WITH TIME ZONE;
 
 DO $$ 

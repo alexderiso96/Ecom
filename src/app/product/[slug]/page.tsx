@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Product } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
 import { ProductDetailActions } from '@/components/products/ProductDetailActions';
+import { ProductGallery } from '@/components/products/ProductGallery';
 
 interface ProductPageProps {
   params: {
@@ -35,17 +36,31 @@ export async function generateMetadata({ params }: ProductPageProps) {
 export default async function ProductPage({ params }: ProductPageProps) {
   const supabase = createClient();
 
-  const { data: product } = await supabase
+  const { data: productData } = await supabase
     .from('products')
-    .select('*, category:categories(*)')
+    .select('*, category:categories(*), variants:product_variants(*)')
     .eq('slug', params.slug)
     .single();
 
-  if (!product) {
+  if (!productData) {
     notFound();
   }
 
+  const product = productData as Product;
   const isOutOfStock = product.stock <= 0;
+
+  // Raccogli tutte le immagini per la galleria multimediale
+  const rawImages: string[] = [];
+  if (product.image_url) rawImages.push(product.image_url);
+  if (Array.isArray(product.images)) {
+    rawImages.push(...product.images);
+  }
+  if (Array.isArray(product.variants)) {
+    product.variants.forEach((v: any) => {
+      if (v.image_url) rawImages.push(v.image_url);
+    });
+  }
+  const galleryImages = Array.from(new Set(rawImages.filter(Boolean)));
 
   return (
     <div className="container py-8 md:py-12">
@@ -59,37 +74,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-16 items-start">
-        {/* Left: Gallery Image Frame */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-b from-slate-100 to-slate-200/50 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          {product.image_url ? (
-            <Image
-              src={product.image_url}
-              alt={product.name}
-              fill
-              priority
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-700">
-              <ShoppingBag className="h-20 w-20 stroke-[1]" />
-            </div>
-          )}
-
-          {/* Badges overlay */}
-          <div className="absolute top-4 left-4 flex flex-col items-start gap-2">
-            {product.is_featured && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-950 border border-slate-900/20">
-                In evidenza
-              </span>
-            )}
-            {product.category?.name && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-slate-800 shadow-xs backdrop-blur-md border border-white/60 dark:bg-slate-900/90 dark:text-slate-200">
-                {product.category.name}
-              </span>
-            )}
-          </div>
-        </div>
+        {/* Left: Interactive Multi-Image Gallery */}
+        <ProductGallery
+          images={galleryImages}
+          productName={product.name}
+          isFeatured={product.is_featured}
+          categoryName={product.category?.name}
+        />
 
         {/* Right: Product Information */}
         <div className="space-y-6">

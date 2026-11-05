@@ -53,6 +53,7 @@ export interface Product {
   description: string | null;
   price: number;
   image_url: string | null;
+  images?: string[] | null;
   stock: number;
   is_featured: boolean;
   is_active: boolean;
