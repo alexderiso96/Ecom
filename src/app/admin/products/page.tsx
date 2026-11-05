@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, ShoppingBag, Upload, AlertCircle, Check, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingBag, Upload, AlertCircle, Check, Star, Download } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database.types';
 import { formatCurrency, slugify } from '@/lib/utils';
@@ -11,12 +11,14 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { SeedButton } from '@/components/admin/SeedButton';
+import { AliExpressImportModal } from '@/components/admin/AliExpressImportModal';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [aliExpressModalOpen, setAliExpressModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Form states
@@ -207,10 +209,22 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <Button onClick={openAddModal} variant="primary" size="sm" className="rounded-full px-5 h-10 font-bold shadow-sm">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Nuovo Prodotto
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setAliExpressModalOpen(true)}
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-4 h-10 font-bold border border-slate-200/80 shadow-xs"
+          >
+            <Download className="h-4 w-4 mr-1.5 text-purple-600" />
+            Importa da AliExpress
+          </Button>
+
+          <Button onClick={openAddModal} variant="primary" size="sm" className="rounded-full px-5 h-10 font-bold shadow-sm">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nuovo Prodotto
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -501,6 +515,14 @@ export default function AdminProductsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* AliExpress Import Modal */}
+      <AliExpressImportModal
+        isOpen={aliExpressModalOpen}
+        onClose={() => setAliExpressModalOpen(false)}
+        categories={categories}
+        onImportSuccess={fetchData}
+      />
     </div>
   );
 }

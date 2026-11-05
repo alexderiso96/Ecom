@@ -67,12 +67,36 @@ export function CartDrawer() {
   const totalPrice = getTotalPrice();
   const totalItems = getTotalItems();
 
-  const handleWhatsAppCheckout = () => {
+  const handleWhatsAppCheckout = async () => {
     if (items.length === 0) return;
+
+    let orderNumber: string | undefined = undefined;
+    try {
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: customerName.trim() || undefined,
+          customerEmail: customerEmail.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
+          shippingAddress: shippingAddress.trim() || undefined,
+          customerNotes: customerNotes.trim() || undefined,
+          items,
+          totalPrice,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        orderNumber = data.orderNumber;
+      }
+    } catch (err) {
+      console.warn('Salvataggio ordine in DB saltato, procedo con WhatsApp:', err);
+    }
 
     const whatsappUrl = buildWhatsAppCheckoutUrl({
       items,
       totalPrice,
+      orderNumber,
       customerName: customerName.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,

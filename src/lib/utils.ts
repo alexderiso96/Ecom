@@ -26,6 +26,7 @@ export function slugify(text: string): string {
 export interface WhatsAppOrderData {
   items: CartItem[];
   totalPrice: number;
+  orderNumber?: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -48,6 +49,9 @@ export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
   });
 
   let message = `🛒 *NUOVO ORDINE E-COMMERCE*\n`;
+  if (data.orderNumber) {
+    message += `📦 *Codice Ordine: #${data.orderNumber}*\n`;
+  }
   message += `📅 Data: ${dateStr}\n\n`;
   message += `*DETTAGLI ARTICOLI:*\n`;
 

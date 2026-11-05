@@ -1,0 +1,49 @@
+name: AliExpress Sync Tracking Cron
+
+on:
+  schedule:
+    # Esegue la verifica tracking ogni 2 ore
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Permette il trigger manuale con un click dalla tab Actions di GitHub
+
+jobs:
+  sync-tracking:
+    name: Sincronizza Codici Tracking Ordini AliExpress
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Invoca Endpoint Sync Tracking
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "::error::Secret APP_URL non configurato nelle impostazioni della repository GitHub!"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::Secret CRON_SECRET non configurato nelle impostazioni della repository GitHub!"
+            exit 1
+          fi
+
+          TARGET_URL="${{ secrets.APP_URL }}/api/aliexpress/sync-tracking"
+          echo "Trigger sync tracking verso: $TARGET_URL"
+
+          # Esegue la richiesta HTTP con cURL passando il Bearer token di sicurezza
+          HTTP_RESPONSE=$(curl -s -S -w "\n%{http_code}" -X GET "$TARGET_URL" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "User-Agent: GitHub-Actions-Cron/1.0" \
+            -H "Accept: application/json")
+
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Risposta API: $HTTP_BODY"
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::Sincronizzazione tracking fallita con status HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "Sincronizzazione tracking completata con successo!"
+
