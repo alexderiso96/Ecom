@@ -4,9 +4,11 @@ import { getAdminClient } from '@/lib/supabase/admin';
 export interface CjProductVariantRaw {
   vid: string;
   pid: string;
-  variantName: string;
+  variantName?: string | null;
+  variantNameEn?: string | null;
   variantSku: string;
-  variantPrice: number;
+  variantSellPrice?: number;
+  variantPrice?: number;
   variantStandardPrice?: number;
   variantWeight?: number;
   variantImage?: string;
@@ -16,9 +18,12 @@ export interface CjProductVariantRaw {
 export interface CjProductDetailRaw {
   pid: string;
   productId?: string;
-  productName: string;
+  productName?: string;
+  productNameEn?: string;
+  nameEn?: string;
   productSku: string;
-  productImage: string;
+  bigImage?: string;
+  productImage?: string;
   productWeight?: number;
   productType?: string;
   categoryName?: string;
@@ -66,13 +71,8 @@ export async function searchCjProducts(options: {
   const params = new URLSearchParams();
   params.append('page', String(pageNum));
   params.append('size', String(pageSize));
-  params.append('pageNum', String(pageNum));
-  params.append('pageSize', String(pageSize));
-
   if (keyword) {
     params.append('keyWord', keyword);
-    params.append('keyword', keyword);
-    params.append('productName', keyword);
   }
   if (categoryId) {
     params.append('categoryId', categoryId);
@@ -100,18 +100,29 @@ export async function searchCjProducts(options: {
   let itemsList: any[] = [];
   let totalCount = 0;
 
-  if (Array.isArray(rawData)) {
-    itemsList = rawData;
-    totalCount = rawData.length;
-  } else if (rawData && typeof rawData === 'object') {
-    itemsList = rawData.list || rawData.content || rawData.data || [];
-    totalCount = rawData.total || itemsList.length;
+  if (rawData) {
+    totalCount = Number(rawData.totalRecords || rawData.total || 0);
+
+    // Formato reale CJ API v2.0: data.content[0].productList
+    if (Array.isArray(rawData.content) && rawData.content.length > 0) {
+      if (Array.isArray(rawData.content[0].productList)) {
+        itemsList = rawData.content[0].productList;
+      } else {
+        itemsList = rawData.content;
+      }
+    } else if (Array.isArray(rawData.productList)) {
+      itemsList = rawData.productList;
+    } else if (Array.isArray(rawData.list)) {
+      itemsList = rawData.list;
+    } else if (Array.isArray(rawData)) {
+      itemsList = rawData;
+    }
   }
 
   console.log(`[CJ Search Response] Trovati ${totalCount} prodotti totali. Estratti in pagina: ${itemsList.length}`);
 
   return {
-    total: totalCount,
+    total: totalCount || itemsList.length,
     list: itemsList,
   };
 }
@@ -142,20 +153,22 @@ export async function importCjProduct(
     throw new Error(`Dettagli prodotto CJ non trovati per PID: ${cjProductId}`);
   }
 
-  // Normalizzazione proprietà di CJ (che possono variare tra API v2.0 e precedenti)
+  // Normalizzazione proprietà di CJ in base alla struttura reale v2.0
   const detail = rawDetail as any;
-  const pid = detail.pid || detail.productId || detail.id || cjProductId;
-  const productName = detail.productName || detail.productNameEn || detail.name || detail.title || 'Prodotto CJ';
-  const productSku = detail.productSku || detail.sku || `CJ-${pid}`;
-  const productImage = detail.productImage || detail.image || detail.img || '';
-  const description = detail.description || detail.productName || productName;
+  const pid = String(detail.pid || detail.productId || detail.id || cjProductId);
+  const productName = String(
+    detail.productNameEn || detail.productName || detail.nameEn || detail.name || 'Prodotto Esclusivo CJ'
+  );
+  const productSku = String(detail.productSku || detail.sku || `CJ-${pid}`);
+  const productImage = String(detail.bigImage || detail.productImage || detail.image || '');
+  const description = detail.description || productName;
 
   const rawVariants: any[] = detail.variants || detail.variantList || detail.stanList || [];
 
   const supabase = getAdminClient();
 
   // Genera uno slug univoco per il prodotto
-  const baseSlug = String(productName)
+  const baseSlug = productName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '')
@@ -163,8 +176,14 @@ export async function importCjProduct(
   const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
 
   // Trova il prezzo base minimo tra le varianti
-  const variantPrices = rawVariants.map((v) => Number(v.variantPrice || v.price || v.sellPrice || 0));
-  const minCostPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : Number(detail.sellPrice || detail.price || 10);
+  const variantPrices = rawVariants.map((v) =>
+    Number(v.variantSellPrice || v.variantPrice || v.price || v.sellPrice || 0)
+  );
+  const minCostPrice =
+    variantPrices.length > 0
+      ? Math.min(...variantPrices)
+      : Number(detail.sellPrice || detail.price || 10);
+
   const sellingPrice = Number((minCostPrice * (1 + markupPercentage / 100)).toFixed(2));
 
   // Inserisci o aggiorna il prodotto
@@ -181,7 +200,7 @@ export async function importCjProduct(
         image_url: productImage,
         stock: 100,
         category_id: categoryId || null,
-        cj_product_id: String(pid),
+        cj_product_id: pid,
         cj_product_sku: productSku,
         last_synced_at: new Date().toISOString(),
         is_active: true,
@@ -200,19 +219,30 @@ export async function importCjProduct(
   // Inserimento o aggiornamento varianti
   if (rawVariants.length > 0) {
     const variantsToUpsert = rawVariants.map((v) => {
-      const vid = v.vid || v.id || v.variantId || `${pid}-${Math.random().toString(36).substring(2, 6)}`;
-      const cost = Number(v.variantPrice || v.price || v.sellPrice || minCostPrice);
+      const vid = String(
+        v.vid || v.id || v.variantId || `${pid}-${Math.random().toString(36).substring(2, 6)}`
+      );
+      const vName = String(
+        v.variantNameEn || v.variantName || v.variantKey || product.name
+      );
+      const cost = Number(
+        v.variantSellPrice || v.variantPrice || v.price || v.sellPrice || minCostPrice
+      );
       const vPrice = Number((cost * (1 + markupPercentage / 100)).toFixed(2));
+      const vImg = String(v.variantImage || v.bigImage || productImage);
+      const vWeight = Number(v.variantWeight || 0);
+      const vSku = String(v.variantSku || v.sku || productSku);
+
       return {
         product_id: product.id,
-        name: v.variantName || v.name || product.name,
-        cj_variant_id: String(vid),
-        cj_sku: v.variantSku || v.sku || productSku,
+        name: vName,
+        cj_variant_id: vid,
+        cj_sku: vSku,
         cost_price: cost,
         price: vPrice,
-        stock: Number(v.inventory || v.stock || 50),
-        weight: Number(v.variantWeight || v.weight || 0),
-        image_url: v.variantImage || v.image || productImage,
+        stock: Number(v.inventoryNum || v.inventory || v.stock || 50),
+        weight: vWeight,
+        image_url: vImg,
         attributes: v.variantKey ? { variantKey: v.variantKey } : {},
       };
     });
@@ -263,17 +293,22 @@ export async function bulkImportCjCategory(options: BulkImportOptions) {
       totalFound: 0,
       importedCount: 0,
       importedProducts: [],
-      errors: [`Nessun prodotto trovato su CJ per "${keyword || ''}". Prova con un termine in inglese come "watches", "rings", "bags", "hoodie".`],
+      errors: [
+        `Nessun prodotto trovato su CJ per "${keyword || ''}". Prova con un termine in inglese come "watches", "rings", "bags", "hoodie".`,
+      ],
     };
   }
 
   const importedProducts: Array<{ id: string; name: string; pid: string }> = [];
   const errors: string[] = [];
 
-  // 2. Itera ed importa ciascun prodotto (il nostro client HTTP rispetta il limite di 30 req/s)
-  for (const item of productsList) {
-    // Estrazione flessibile del Product ID dai vari formati JSON di CJ
-    const pid = item.productId || item.pid || item.id || item.product_id;
+  // Limita al numero richiesto
+  const targetItems = productsList.slice(0, limit);
+
+  // 2. Itera ed importa ciascun prodotto (il nostro client HTTP rispetta il rate limit)
+  for (const item of targetItems) {
+    // Estrazione dell'ID: nei risultati v2.0 è `item.id` (oppure `item.productId` / `item.pid`)
+    const pid = item.id || item.productId || item.pid || item.product_id;
     if (!pid) {
       console.warn('[Bulk Import] Item senza ID identificabile:', item);
       continue;
@@ -286,7 +321,7 @@ export async function bulkImportCjCategory(options: BulkImportOptions) {
         name: imported.name,
         pid: String(pid),
       });
-      console.log(`[Bulk Import] Importato (${importedProducts.length}/${productsList.length}): ${imported.name}`);
+      console.log(`[Bulk Import] Importato (${importedProducts.length}/${targetItems.length}): ${imported.name}`);
     } catch (err: any) {
       console.warn(`[Bulk Import] Errore importazione per PID ${pid}:`, err?.message);
       errors.push(`PID ${pid}: ${err?.message || 'Errore import'}`);
