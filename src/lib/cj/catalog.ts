@@ -186,39 +186,63 @@ export async function importCjProduct(
 
   const sellingPrice = Number((minCostPrice * (1 + markupPercentage / 100)).toFixed(2));
 
-  // Inserisci o aggiorna il prodotto
-  const { data: productData, error: prodErr } = await supabase
+  // 1. Controlla se il prodotto esiste già localmente per cj_product_id
+  const { data: existingProduct } = await supabase
     .from('products')
-    .upsert(
-      {
-        name: productName,
-        slug,
-        description,
-        price: sellingPrice,
-        cost_price: minCostPrice,
-        markup_percentage: markupPercentage,
-        image_url: productImage,
-        stock: 100,
-        category_id: categoryId || null,
-        cj_product_id: pid,
-        cj_product_sku: productSku,
-        last_synced_at: new Date().toISOString(),
-        is_active: true,
-      },
-      { onConflict: 'cj_product_id' }
-    )
-    .select()
-    .single();
+    .select('id, slug')
+    .eq('cj_product_id', pid)
+    .maybeSingle();
 
-  if (prodErr || !productData) {
-    throw new Error(`Errore salvataggio prodotto locale: ${prodErr?.message}`);
+  let product: { id: string; name: string };
+
+  const productPayload: Record<string, any> = {
+    name: productName,
+    description,
+    price: sellingPrice,
+    cost_price: minCostPrice,
+    markup_percentage: markupPercentage,
+    image_url: productImage,
+    stock: 100,
+    category_id: categoryId || null,
+    cj_product_id: pid,
+    cj_product_sku: productSku,
+    last_synced_at: new Date().toISOString(),
+    is_active: true,
+  };
+
+  if (existingProduct) {
+    // Aggiornamento prodotto esistente
+    const { data: updated, error: updateErr } = await supabase
+      .from('products')
+      .update(productPayload)
+      .eq('id', existingProduct.id)
+      .select('id, name')
+      .single();
+
+    if (updateErr || !updated) {
+      throw new Error(`Errore aggiornamento prodotto: ${updateErr?.message}`);
+    }
+    product = updated as { id: string; name: string };
+  } else {
+    // Inserimento nuovo prodotto con slug univoco garantito
+    const { data: inserted, error: insertErr } = await supabase
+      .from('products')
+      .insert({
+        ...productPayload,
+        slug,
+      })
+      .select('id, name')
+      .single();
+
+    if (insertErr || !inserted) {
+      throw new Error(`Errore inserimento prodotto: ${insertErr?.message}`);
+    }
+    product = inserted as { id: string; name: string };
   }
 
-  const product = productData as { id: string; name: string };
-
-  // Inserimento o aggiornamento varianti
+  // 2. Inserimento o aggiornamento varianti con idempotenza garantita
   if (rawVariants.length > 0) {
-    const variantsToUpsert = rawVariants.map((v) => {
+    for (const v of rawVariants) {
       const vid = String(
         v.vid || v.id || v.variantId || `${pid}-${Math.random().toString(36).substring(2, 6)}`
       );
@@ -232,27 +256,37 @@ export async function importCjProduct(
       const vImg = String(v.variantImage || v.bigImage || productImage);
       const vWeight = Number(v.variantWeight || 0);
       const vSku = String(v.variantSku || v.sku || productSku);
+      const stock = Number(v.inventoryNum || v.inventory || v.stock || 50);
 
-      return {
+      const variantPayload = {
         product_id: product.id,
         name: vName,
         cj_variant_id: vid,
         cj_sku: vSku,
         cost_price: cost,
         price: vPrice,
-        stock: Number(v.inventoryNum || v.inventory || v.stock || 50),
+        stock,
         weight: vWeight,
         image_url: vImg,
         attributes: v.variantKey ? { variantKey: v.variantKey } : {},
       };
-    });
 
-    const { error: varErr } = await supabase
-      .from('product_variants')
-      .upsert(variantsToUpsert, { onConflict: 'cj_variant_id' });
+      const { data: existingVariant } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('cj_variant_id', vid)
+        .maybeSingle();
 
-    if (varErr) {
-      console.error('[CJ Catalog] Errore inserimento varianti:', varErr.message);
+      if (existingVariant) {
+        await supabase
+          .from('product_variants')
+          .update(variantPayload)
+          .eq('id', existingVariant.id);
+      } else {
+        await supabase
+          .from('product_variants')
+          .insert(variantPayload);
+      }
     }
   }
 

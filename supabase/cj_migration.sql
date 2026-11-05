@@ -47,6 +47,15 @@ ALTER TABLE public.products
     ADD COLUMN IF NOT EXISTS markup_percentage NUMERIC(6, 2) DEFAULT 40.00,
     ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP WITH TIME ZONE;
 
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'products_cj_product_id_key'
+    ) THEN
+        ALTER TABLE public.products ADD CONSTRAINT products_cj_product_id_key UNIQUE (cj_product_id);
+    END IF;
+END $$;
+
 -- 4. TABELLA: PRODUCT VARIANTS
 CREATE TABLE IF NOT EXISTS public.product_variants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
