@@ -53,6 +53,22 @@ export async function POST(req: NextRequest) {
       markupPercentage: Number(markupPercentage) || 40,
     });
 
+    if (result.importedCount === 0) {
+      const errorMsg =
+        result.errors && result.errors.length > 0
+          ? result.errors.join(' | ')
+          : `Nessun prodotto trovato per "${keyword || ''}". Prova con una parola chiave in inglese (es: "watches", "rings", "bags", "sunglasses").`;
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorMsg,
+          result,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: `Importazione completata: ${result.importedCount} prodotti importati con successo!`,
@@ -66,4 +82,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
