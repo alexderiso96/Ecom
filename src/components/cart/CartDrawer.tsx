@@ -3,11 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  AlertCircle,
+  Sparkles,
+  MessageCircle,
+  Truck,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { formatCurrency, buildWhatsAppCheckoutUrl } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
 import { createClient } from '@/lib/supabase/client';
+import { CjFreightOption } from '@/types/cj.types';
 
 export function CartDrawer() {
   const {
@@ -25,10 +38,20 @@ export function CartDrawer() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingCity, setShippingCity] = useState('');
+  const [shippingPostalCode, setShippingPostalCode] = useState('');
+  const [shippingProvince, setShippingProvince] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
 
-  // Precarica i dati utente se già loggato
+  // Spedizioni CJ
+  const [freightOptions, setFreightOptions] = useState<CjFreightOption[]>([]);
+  const [selectedCarrier, setSelectedCarrier] = useState<CjFreightOption | null>(null);
+  const [isLoadingFreight, setIsLoadingFreight] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+
+  // Precarica dati utente se già loggato
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -62,25 +85,119 @@ export function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
+  // Calcolo Spedizioni CJ
+  const handleCalculateShipping = async () => {
+    if (!shippingPostalCode) return;
+
+    setIsLoadingFreight(true);
+    try {
+      const res = await fetch('/api/cj/freight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationCountryCode: 'IT',
+          postalCode: shippingPostalCode,
+          city: shippingCity,
+          province: shippingProvince,
+          items: items.map((i) => ({
+            cjVariantId: i.cjVariantId || 'DEFAULT',
+            quantity: i.quantity,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && Array.isArray(data.options)) {
+        setFreightOptions(data.options);
+        if (data.options.length > 0) {
+          setSelectedCarrier(data.options[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Errore calcolo spedizioni:', err);
+    } finally {
+      setIsLoadingFreight(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const totalPrice = getTotalPrice();
+  const subtotal = getTotalPrice();
   const totalItems = getTotalItems();
+  const shippingCost = selectedCarrier ? Number(selectedCarrier.logisticPrice) : 0;
+  const finalTotal = subtotal + shippingCost;
 
   const handleWhatsAppCheckout = () => {
     if (items.length === 0) return;
 
+    const fullAddress = [
+      shippingAddress,
+      shippingCity,
+      shippingProvince,
+      shippingPostalCode,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
     const whatsappUrl = buildWhatsAppCheckoutUrl({
       items,
-      totalPrice,
+      totalPrice: finalTotal,
       customerName: customerName.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      shippingAddress: shippingAddress.trim() || undefined,
-      customerNotes: customerNotes.trim() || undefined,
+      shippingAddress: fullAddress || undefined,
+      customerNotes: `${customerNotes ? `Note: ${customerNotes}. ` : ''}${
+        selectedCarrier ? `Corriere CJ: ${selectedCarrier.logisticName}` : ''
+      }`.trim() || undefined,
     });
 
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleDirectOrder = async () => {
+    if (!customerName || !customerEmail || !shippingAddress || !shippingCity || !shippingPostalCode) {
+      setShowCheckoutForm(true);
+      alert('Compila tutti i campi di spedizione obbligatori.');
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+    setOrderSuccessMessage(null);
+
+    try {
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName,
+          customerEmail,
+          customerPhone,
+          shippingAddress,
+          shippingCity,
+          shippingProvince,
+          shippingPostalCode,
+          shippingCountryCode: 'IT',
+          shippingCountry: 'Italy',
+          items,
+          selectedLogisticName: selectedCarrier?.logisticName || 'CJ Packet Ordinary',
+          shippingFee: shippingCost,
+          notes: customerNotes,
+          autoFulfillCj: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Errore creazione ordine.');
+      }
+
+      setOrderSuccessMessage(`Ordine ${data.order.orderNumber} confermato con successo!`);
+      clearCart();
+    } catch (err: any) {
+      alert(`Errore: ${err?.message || 'Impossibile inviare l\'ordine.'}`);
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   return (
@@ -109,7 +226,7 @@ export function CartDrawer() {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium">
-                  Checkout diretto senza registrazione obbligatoria
+                  Spedizione Dropshipping integrata CJ
                 </p>
               </div>
             </div>
@@ -124,7 +241,17 @@ export function CartDrawer() {
 
           {/* Cart Item List */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-thin">
-            {items.length === 0 ? (
+            {orderSuccessMessage && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-xs">Ordine Ricevuto!</h4>
+                  <p className="text-[11px] mt-0.5">{orderSuccessMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {items.length === 0 && !orderSuccessMessage ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-16">
                 <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 dark:bg-slate-900 dark:text-slate-600 mb-4">
                   <ShoppingBag className="h-9 w-9 stroke-[1.2]" />
@@ -133,7 +260,7 @@ export function CartDrawer() {
                   Il tuo carrello è vuoto
                 </h3>
                 <p className="text-xs text-slate-500 max-w-xs mt-1 mb-6">
-                  Esplora il catalogo di Aura Store e seleziona i tuoi prodotti esclusivi.
+                  Esplora il catalogo e seleziona i tuoi prodotti esclusivi.
                 </p>
                 <button
                   onClick={closeCart}
@@ -216,7 +343,7 @@ export function CartDrawer() {
               ))
             )}
 
-            {/* Optional Customer Information */}
+            {/* Form Spedizione & Calcolo CJ */}
             {items.length > 0 && (
               <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-slate-800">
                 <button
@@ -226,47 +353,114 @@ export function CartDrawer() {
                 >
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                    Dati di spedizione (opzionali)
+                    Dati di Spedizione e Corriere CJ
                   </span>
                   <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                    {showCheckoutForm ? 'Chiudi' : 'Compila ora'}
+                    {showCheckoutForm ? 'Comprimi' : 'Compila dati'}
                   </span>
                 </button>
 
                 {showCheckoutForm && (
-                  <div className="mt-3 p-3 rounded-2xl border border-slate-200/70 bg-white space-y-2.5 text-left dark:border-slate-800 dark:bg-slate-900">
+                  <div className="mt-3 p-3.5 rounded-2xl border border-slate-200/70 bg-white space-y-2.5 text-left dark:border-slate-800 dark:bg-slate-900">
                     <Input
-                      label="Il tuo Nome"
+                      label="Nome e Cognome *"
                       placeholder="es. Mario Rossi"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                     />
                     <Input
-                      label="Email"
+                      label="Email *"
                       type="email"
                       placeholder="mario.rossi@example.com"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                     />
                     <Input
-                      label="Numero di Telefono"
+                      label="Telefono"
                       placeholder="+39 333 1234567"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                     />
                     <Input
-                      label="Indirizzo di Spedizione"
-                      placeholder="Via Roma 10, 00100 Roma (RM)"
+                      label="Indirizzo (Via e Civico) *"
+                      placeholder="Via Roma 10"
                       value={shippingAddress}
                       onChange={(e) => setShippingAddress(e.target.value)}
                     />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        label="Città *"
+                        placeholder="Roma"
+                        value={shippingCity}
+                        onChange={(e) => setShippingCity(e.target.value)}
+                      />
+                      <Input
+                        label="Provincia"
+                        placeholder="RM"
+                        value={shippingProvince}
+                        onChange={(e) => setShippingProvince(e.target.value)}
+                      />
+                      <Input
+                        label="CAP *"
+                        placeholder="00100"
+                        value={shippingPostalCode}
+                        onChange={(e) => setShippingPostalCode(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={handleCalculateShipping}
+                        disabled={!shippingPostalCode || isLoadingFreight}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold dark:bg-slate-800 dark:text-slate-200 transition-colors disabled:opacity-50"
+                      >
+                        {isLoadingFreight ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Truck className="h-3.5 w-3.5" />
+                        )}
+                        <span>Calcola Tariffe Spedizione CJ</span>
+                      </button>
+                    </div>
+
+                    {/* Selezione Corrieri Disponibili */}
+                    {freightOptions.length > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          Seleziona Corriere Spedizione:
+                        </label>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                          {freightOptions.map((opt) => (
+                            <div
+                              key={opt.logisticName}
+                              onClick={() => setSelectedCarrier(opt)}
+                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all ${
+                                selectedCarrier?.logisticName === opt.logisticName
+                                  ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200'
+                                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+                              }`}
+                            >
+                              <div>
+                                <span className="font-semibold block">{opt.logisticName}</span>
+                                <span className="text-[10px] text-slate-500">
+                                  {opt.logisticAging ? `Stima: ${opt.logisticAging} gg` : 'Tracking disponibile'}
+                                </span>
+                              </div>
+                              <span className="font-black">{formatCurrency(opt.logisticPrice)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Note speciali
                       </label>
                       <textarea
                         rows={2}
-                        placeholder="Taglie specifiche, citofono o preferenze di consegna..."
+                        placeholder="Citofono o istruzioni di consegna..."
                         value={customerNotes}
                         onChange={(e) => setCustomerNotes(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
@@ -280,37 +474,53 @@ export function CartDrawer() {
 
           {/* Footer Checkout Actions */}
           {items.length > 0 && (
-            <div className="p-5 border-t border-slate-200/70 bg-slate-50/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/70 space-y-3.5">
-              <div className="space-y-1.5 text-xs">
+            <div className="p-5 border-t border-slate-200/70 bg-slate-50/70 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/70 space-y-3">
+              <div className="space-y-1 text-xs">
                 <div className="flex justify-between text-slate-500 font-medium">
                   <span>Subtotale articoli ({totalItems})</span>
-                  <span>{formatCurrency(totalPrice)}</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-500 font-medium">
-                  <span>Spedizione Express 24/48h</span>
-                  <span className="text-emerald-600 font-bold">Gratuita</span>
+                  <span>Spedizione ({selectedCarrier?.logisticName || 'Standard CJ'})</span>
+                  <span className={shippingCost === 0 ? 'text-emerald-600 font-bold' : 'font-bold'}>
+                    {shippingCost === 0 ? 'Gratuita' : formatCurrency(shippingCost)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-base font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <span>Totale Stimato</span>
-                  <span>{formatCurrency(totalPrice)}</span>
+                  <span>Totale Finale</span>
+                  <span>{formatCurrency(finalTotal)}</span>
                 </div>
               </div>
 
               {/* Informative Pill */}
-              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 text-[11px] leading-relaxed border border-emerald-500/20">
-                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed border border-slate-200/60 dark:border-slate-800">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-indigo-500" />
                 <span>
-                  Cliccando su Procedi si aprirà WhatsApp con la lista degli articoli formattata per completare l'ordine con il nostro staff.
+                  Puoi confermare l'ordine in modo nativo con invio diretto a CJ o inoltrare il riepilogo al nostro servizio WhatsApp.
                 </span>
               </div>
 
-              {/* High-impact WhatsApp Button */}
+              {/* Direct Order Button */}
+              <button
+                onClick={handleDirectOrder}
+                disabled={isSubmittingOrder}
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 text-xs shadow-md active:scale-[0.99] transition-all dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 disabled:opacity-50"
+              >
+                {isSubmittingOrder ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ShoppingBag className="h-4 w-4 stroke-[2]" />
+                )}
+                <span>Conferma Ordine e Invia al Magazzino CJ</span>
+              </button>
+
+              {/* WhatsApp Option Button */}
               <button
                 onClick={handleWhatsAppCheckout}
-                className="w-full flex items-center justify-center gap-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 text-sm shadow-lg shadow-emerald-600/25 active:scale-[0.99] transition-all"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 text-xs shadow-sm active:scale-[0.99] transition-all"
               >
-                <MessageCircle className="h-4 w-4 stroke-[2.2]" />
-                <span>Procedi all'Ordine su WhatsApp</span>
+                <MessageCircle className="h-4 w-4 stroke-[2]" />
+                <span>Completa su WhatsApp</span>
               </button>
 
               <button

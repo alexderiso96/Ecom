@@ -13,6 +13,20 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function formatDate(dateString: string): string {
+  try {
+    return new Intl.DateTimeFormat('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(dateString));
+  } catch {
+    return dateString;
+  }
+}
+
 export function slugify(text: string): string {
   return text
     .toString()
@@ -70,4 +84,3 @@ export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
 
   return `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
 }
-
