@@ -52,7 +52,7 @@ export async function getCjCategories(): Promise<CjCategoryItem[]> {
 
 /**
  * Cerca prodotti sul catalogo di CJdropshipping per parola chiave o ID categoria
- * POST /product/list
+ * GET /product/listV2 (Elasticsearch V2.0 con fallback a /product/list)
  */
 export async function searchCjProducts(options: {
   keyword?: string;
@@ -62,23 +62,47 @@ export async function searchCjProducts(options: {
 }) {
   const { keyword, categoryId, pageNum = 1, pageSize = 20 } = options;
 
-  const body: Record<string, any> = {
-    pageNum,
-    pageSize,
-  };
+  const params = new URLSearchParams();
+  params.append('page', String(pageNum));
+  params.append('size', String(pageSize));
+  if (keyword) {
+    params.append('keyWord', keyword);
+  }
+  if (categoryId) {
+    params.append('categoryId', categoryId);
+  }
 
-  if (keyword) body.keyword = keyword;
-  if (categoryId) body.categoryId = categoryId;
+  let response: any;
+  try {
+    // 1. Endpoint primario CJ API v2.0 (GET /product/listV2)
+    response = await cjRequest<any>(`/product/listV2?${params.toString()}`, {
+      method: 'GET',
+      category: 'catalog',
+    });
+  } catch (err: any) {
+    console.warn('[CJ Catalog] Fallback da /product/listV2 a /product/list:', err?.message);
+    // 2. Fallback su /product/list con metodo GET
+    response = await cjRequest<any>(`/product/list?${params.toString()}`, {
+      method: 'GET',
+      category: 'catalog',
+    });
+  }
 
-  const response = await cjRequest<any>('/product/list', {
-    method: 'POST',
-    body,
-    category: 'catalog',
-  });
+  const rawData = response.data;
+  let itemsList: any[] = [];
+  let totalCount = 0;
+
+  if (Array.isArray(rawData)) {
+    itemsList = rawData;
+    totalCount = rawData.length;
+  } else if (rawData && typeof rawData === 'object') {
+    itemsList = rawData.list || rawData.content || rawData.data || [];
+    totalCount = rawData.total || itemsList.length;
+  }
 
   return {
-    total: response.data?.total || 0,
-    list: response.data?.list || [],
+    total: totalCount,
+    list: itemsList,
   };
 }
 
@@ -227,7 +251,7 @@ export async function bulkImportCjCategory(options: BulkImportOptions) {
 
   // 2. Itera ed importa ciascun prodotto (il nostro client HTTP rispetta il limite di 30 req/s)
   for (const item of productsList) {
-    const pid = item.pid;
+    const pid = item.pid || item.id;
     if (!pid) continue;
 
     try {
