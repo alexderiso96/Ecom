@@ -49,7 +49,10 @@ export default function AdminProductsPage() {
 
   // CJdropshipping Import Modal states
   const [cjModalOpen, setCjModalOpen] = useState(false);
+  const [cjImportTab, setCjImportTab] = useState<'single' | 'bulk'>('bulk');
   const [cjProductIdOrUrl, setCjProductIdOrUrl] = useState('');
+  const [cjBulkKeyword, setCjBulkKeyword] = useState('');
+  const [cjBulkLimit, setCjBulkLimit] = useState('20');
   const [cjSelectedCategory, setCjSelectedCategory] = useState('');
   const [cjMarkupPercentage, setCjMarkupPercentage] = useState('40');
   const [cjImporting, setCjImporting] = useState(false);
@@ -263,6 +266,46 @@ export default function AdminProductsPage() {
     }
   };
 
+  // Importazione Massiva di una Categoria / Ricerca da CJdropshipping
+  const handleCjBulkImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cjBulkKeyword.trim()) {
+      setCjMessage({ type: 'error', text: 'Inserisci una parola chiave o nicchia (es. Orologi, Gioielli, Borse).' });
+      return;
+    }
+
+    setCjImporting(true);
+    setCjMessage(null);
+
+    try {
+      const res = await fetch('/api/cj/import/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: cjBulkKeyword.trim(),
+          localCategoryId: cjSelectedCategory || undefined,
+          limit: parseInt(cjBulkLimit, 10) || 20,
+          markupPercentage: parseFloat(cjMarkupPercentage) || 40,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Errore durante l\'importazione di massa.');
+      }
+
+      setCjMessage({
+        type: 'success',
+        text: `Successo! ${data.result.importedCount} prodotti della categoria "${cjBulkKeyword}" importati con tutte le varianti!`,
+      });
+      await fetchData();
+    } catch (err: any) {
+      setCjMessage({ type: 'error', text: err?.message || 'Errore imprevisto importazione massiva' });
+    } finally {
+      setCjImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -451,11 +494,39 @@ export default function AdminProductsPage() {
       <Modal
         isOpen={cjModalOpen}
         onClose={() => setCjModalOpen(false)}
-        title="Importa Prodotto da CJdropshipping"
+        title="Importa da CJdropshipping"
       >
-        <form onSubmit={handleCjImport} className="space-y-4">
-          <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-indigo-900 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 text-xs leading-relaxed">
-            Inserisci il <strong>PID</strong> (Product ID) di CJdropshipping o l'URL della scheda prodotto. Il sistema scaricherà automaticamente titolo, immagini in alta risoluzione, tutte le varianti (vid), pesi per il calcolo spedizione e applicherà il ricarico percentuale impostato.
+        <div className="space-y-4">
+          {/* Tabs: Massivo vs Singolo */}
+          <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setCjImportTab('bulk');
+                setCjMessage(null);
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                cjImportTab === 'bulk'
+                  ? 'bg-white text-indigo-700 shadow-xs dark:bg-slate-900 dark:text-indigo-300'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+              }`}
+            >
+              Importa Categoria in Blocco (Massivo)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCjImportTab('single');
+                setCjMessage(null);
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                cjImportTab === 'single'
+                  ? 'bg-white text-indigo-700 shadow-xs dark:bg-slate-900 dark:text-indigo-300'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+              }`}
+            >
+              Singolo Prodotto (PID / Link)
+            </button>
           </div>
 
           {cjMessage && (
@@ -475,57 +546,140 @@ export default function AdminProductsPage() {
             </div>
           )}
 
-          <Input
-            label="PID o Link Prodotto CJdropshipping *"
-            placeholder="es. 184518294819 o https://cjdropshipping.com/product-detail/..."
-            value={cjProductIdOrUrl}
-            onChange={(e) => setCjProductIdOrUrl(e.target.value)}
-            required
-          />
+          {cjImportTab === 'bulk' ? (
+            /* Form Importazione Categoria Massiva */
+            <form onSubmit={handleCjBulkImport} className="space-y-3.5">
+              <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-indigo-900 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 text-xs leading-relaxed">
+                Importa automaticamente decine di prodotti contemporaneamente cercando per parola chiave o nicchia. Il sistema scaricherà foto, titoli, varianti e applicherà il tuo ricarico.
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Categoria Destinazione
-              </label>
-              <select
-                value={cjSelectedCategory}
-                onChange={(e) => setCjSelectedCategory(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <Input
+                label="Cerca Categoria o Parola Chiave *"
+                placeholder="es. watches, rings, luxury jewelry, handbags, sunglasses..."
+                value={cjBulkKeyword}
+                onChange={(e) => setCjBulkKeyword(e.target.value)}
+                required
+              />
 
-            <Input
-              label="Margine Ricarico % *"
-              type="number"
-              placeholder="40"
-              value={cjMarkupPercentage}
-              onChange={(e) => setCjMarkupPercentage(e.target.value)}
-              required
-            />
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Quantità da Caricare
+                  </label>
+                  <select
+                    value={cjBulkLimit}
+                    onChange={(e) => setCjBulkLimit(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 font-bold"
+                  >
+                    <option value="10">10 Prodotti</option>
+                    <option value="20">20 Prodotti</option>
+                    <option value="30">30 Prodotti</option>
+                    <option value="50">50 Prodotti</option>
+                  </select>
+                </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCjModalOpen(false)}
-            >
-              Chiudi
-            </Button>
-            <Button type="submit" isLoading={cjImporting} size="sm">
-              <DownloadCloud className="h-4 w-4 mr-1.5" />
-              Avvia Importazione
-            </Button>
-          </div>
-        </form>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Categoria Store
+                  </label>
+                  <select
+                    value={cjSelectedCategory}
+                    onChange={(e) => setCjSelectedCategory(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Input
+                  label="Ricarico % *"
+                  type="number"
+                  placeholder="40"
+                  value={cjMarkupPercentage}
+                  onChange={(e) => setCjMarkupPercentage(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCjModalOpen(false)}
+                >
+                  Annulla
+                </Button>
+                <Button type="submit" isLoading={cjImporting} size="sm">
+                  <DownloadCloud className="h-4 w-4 mr-1.5" />
+                  Importa {cjBulkLimit} Prodotti in Blocco
+                </Button>
+              </div>
+            </form>
+          ) : (
+            /* Form Importazione Singola */
+            <form onSubmit={handleCjImport} className="space-y-3.5">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 text-xs leading-relaxed">
+                Inserisci il PID (Product ID) o l'URL specifico della scheda prodotto di CJdropshipping per importare un singolo articolo con tutte le sue varianti.
+              </div>
+
+              <Input
+                label="PID o Link Prodotto CJ *"
+                placeholder="es. 184518294819 o https://cjdropshipping.com/product-detail/..."
+                value={cjProductIdOrUrl}
+                onChange={(e) => setCjProductIdOrUrl(e.target.value)}
+                required
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Categoria Destinazione
+                  </label>
+                  <select
+                    value={cjSelectedCategory}
+                    onChange={(e) => setCjSelectedCategory(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Input
+                  label="Margine Ricarico % *"
+                  type="number"
+                  placeholder="40"
+                  value={cjMarkupPercentage}
+                  onChange={(e) => setCjMarkupPercentage(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCjModalOpen(false)}
+                >
+                  Annulla
+                </Button>
+                <Button type="submit" isLoading={cjImporting} size="sm">
+                  <DownloadCloud className="h-4 w-4 mr-1.5" />
+                  Importa Singolo Prodotto
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </Modal>
 
       {/* Modal: Aggiungi / Modifica Prodotto Manuale */}
