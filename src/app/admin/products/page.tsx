@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, ShoppingBag, Upload, AlertCircle, Check, Star } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ShoppingBag,
+  Upload,
+  AlertCircle,
+  Check,
+  Star,
+  DownloadCloud,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database.types';
 import { formatCurrency, slugify } from '@/lib/utils';
@@ -35,6 +47,14 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // CJdropshipping Import Modal states
+  const [cjModalOpen, setCjModalOpen] = useState(false);
+  const [cjProductIdOrUrl, setCjProductIdOrUrl] = useState('');
+  const [cjSelectedCategory, setCjSelectedCategory] = useState('');
+  const [cjMarkupPercentage, setCjMarkupPercentage] = useState('40');
+  const [cjImporting, setCjImporting] = useState(false);
+  const [cjMessage, setCjMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const fetchData = async () => {
     setLoading(true);
     const supabase = createClient();
@@ -44,7 +64,14 @@ export default function AdminProductsPage() {
     ]);
 
     if (prodRes.data) setProducts(prodRes.data);
-    if (catRes.data) setCategories(catRes.data);
+    if (catRes.data) {
+      const catList = catRes.data as Category[];
+      setCategories(catList);
+      if (!categoryId && catList.length > 0) {
+        setCategoryId(catList[0].id);
+        setCjSelectedCategory(catList[0].id);
+      }
+    }
     setLoading(false);
   };
 
@@ -100,26 +127,24 @@ export default function AdminProductsPage() {
     try {
       const supabase = createClient();
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('products-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
-      // Recupera URL pubblico
-      const { data: publicUrlData } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('products-images')
         .getPublicUrl(filePath);
 
-      setImageUrl(publicUrlData.publicUrl);
+      setImageUrl(publicUrl);
     } catch (err: any) {
-      setErrorMsg(`Errore upload file su Supabase Storage: ${err.message}`);
+      setErrorMsg(`Errore upload immagine: ${err.message || 'Riprova'}`);
     } finally {
       setUploadingFile(false);
     }
@@ -127,28 +152,34 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setErrorMsg(null);
-
-    const supabase = createClient();
-    const numericPrice = parseFloat(price);
-    const numericStock = parseInt(stock, 10);
-
-    if (isNaN(numericPrice) || numericPrice < 0) {
-      setErrorMsg('Inserisci un prezzo valido.');
-      setSaving(false);
+    if (!name.trim()) {
+      setErrorMsg('Il nome del prodotto è obbligatorio.');
+      return;
+    }
+    const numPrice = parseFloat(price);
+    if (isNaN(numPrice) || numPrice < 0) {
+      setErrorMsg('Inserisci un prezzo valido (es. 29.99).');
+      return;
+    }
+    const numStock = parseInt(stock, 10);
+    if (isNaN(numStock) || numStock < 0) {
+      setErrorMsg('Inserisci uno stock valido.');
       return;
     }
 
+    setSaving(true);
+    setErrorMsg(null);
+    const supabase = createClient();
+
     try {
       const payload = {
-        name,
-        slug,
+        name: name.trim(),
+        slug: slug.trim() || slugify(name),
         category_id: categoryId || null,
-        description: description || null,
-        price: numericPrice,
-        stock: isNaN(numericStock) ? 0 : numericStock,
-        image_url: imageUrl || null,
+        description: description.trim() || null,
+        price: numPrice,
+        stock: numStock,
+        image_url: imageUrl.trim() || null,
         is_featured: isFeatured,
         is_active: isActive,
       };
@@ -158,41 +189,78 @@ export default function AdminProductsPage() {
           .from('products')
           .update(payload)
           .eq('id', editingProduct.id);
+
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const { error } = await supabase
+          .from('products')
+          .insert(payload);
+
         if (error) throw error;
       }
 
       setModalOpen(false);
-      fetchData();
+      await fetchData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Errore salvataggio prodotto.');
+      setErrorMsg(`Salvataggio fallito: ${err.message}`);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string, prodName: string) => {
-    if (!confirm(`Sei sicuro di voler eliminare il prodotto "${prodName}"?`)) return;
+    if (!confirm(`Sei sicuro di voler eliminare definitivamente "${prodName}"?`)) return;
 
     const supabase = createClient();
     const { error } = await supabase.from('products').delete().eq('id', id);
-
     if (error) {
       alert(`Errore eliminazione: ${error.message}`);
     } else {
-      fetchData();
+      await fetchData();
     }
   };
 
-  const toggleProductActive = async (product: Product) => {
+  const toggleProductActive = async (id: string, current: boolean) => {
     const supabase = createClient();
-    const updated = !product.is_active;
-    await supabase.from('products').update({ is_active: updated }).eq('id', product.id);
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, is_active: updated } : p))
-    );
+    await supabase.from('products').update({ is_active: !current }).eq('id', id);
+    await fetchData();
+  };
+
+  // Importazione da CJdropshipping
+  const handleCjImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cjProductIdOrUrl.trim()) {
+      setCjMessage({ type: 'error', text: 'Inserisci il PID o il link del prodotto CJ.' });
+      return;
+    }
+
+    setCjImporting(true);
+    setCjMessage(null);
+
+    try {
+      const res = await fetch('/api/cj/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cjProductIdOrUrl: cjProductIdOrUrl.trim(),
+          categoryId: cjSelectedCategory || undefined,
+          markupPercentage: parseFloat(cjMarkupPercentage) || 40,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Errore durante l\'importazione.');
+      }
+
+      setCjMessage({ type: 'success', text: data.message });
+      setCjProductIdOrUrl('');
+      await fetchData();
+    } catch (err: any) {
+      setCjMessage({ type: 'error', text: err?.message || 'Errore imprevisto' });
+    } finally {
+      setCjImporting(false);
+    }
   };
 
   return (
@@ -203,14 +271,27 @@ export default function AdminProductsPage() {
             Gestione Prodotti
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Gestisci articoli, prezzi, disponibilità stock e upload immagini su Supabase Storage.
+            Gestisci articoli, prezzi, importazione CJdropshipping e giacenze di magazzino.
           </p>
         </div>
 
-        <Button onClick={openAddModal} variant="primary" size="sm" className="rounded-full px-5 h-10 font-bold shadow-sm">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Nuovo Prodotto
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => {
+              setCjMessage(null);
+              setCjModalOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-full px-4 h-10 text-xs font-bold border border-indigo-200 text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 transition-all dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 shadow-xs"
+          >
+            <DownloadCloud className="h-4 w-4 stroke-[2]" />
+            <span>Importa da CJdropshipping</span>
+          </button>
+
+          <Button onClick={openAddModal} variant="primary" size="sm" className="rounded-full px-5 h-10 font-bold shadow-sm">
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nuovo Prodotto
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -220,6 +301,7 @@ export default function AdminProductsPage() {
             <thead className="bg-slate-50/80 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-200/70 dark:bg-slate-800/50 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4">Prodotto</th>
+                <th className="px-6 py-4">Fornitore / CJ</th>
                 <th className="px-6 py-4">Categoria</th>
                 <th className="px-6 py-4">Prezzo</th>
                 <th className="px-6 py-4">Disponibilità</th>
@@ -230,20 +312,26 @@ export default function AdminProductsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-400">
+                  <td colSpan={7} className="text-center py-8 text-slate-400">
                     Caricamento catalogo in corso...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-400">
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       Nessun articolo presente nel database.
                     </p>
                     <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
-                      Puoi aggiungere un prodotto manualmente oppure caricare istantaneamente il catalogo dimostrativo completo.
+                      Puoi importare un articolo da CJdropshipping, aggiungerne uno manualmente o caricare il seed dimostrativo.
                     </p>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => setCjModalOpen(true)}
+                        className="rounded-full px-4 py-2 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm"
+                      >
+                        Importa da CJ
+                      </button>
                       <SeedButton />
                     </div>
                   </td>
@@ -263,70 +351,93 @@ export default function AdminProductsPage() {
                               sizes="44px"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300">
-                              <ShoppingBag className="h-5 w-5" />
+                            <div className="h-full w-full flex items-center justify-center text-slate-300">
+                              <ShoppingBag className="h-5 w-5 stroke-[1.2]" />
                             </div>
                           )}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            {p.name}
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                              {p.name}
+                            </span>
                             {p.is_featured && (
-                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400 flex-shrink-0" />
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono">
+                          <span className="text-[11px] text-slate-400 font-mono">
                             /{p.slug}
-                          </div>
+                          </span>
                         </div>
                       </div>
                     </td>
+
                     <td className="px-6 py-3.5">
-                      <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
-                        {p.category?.name || 'Senza Categoria'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 font-black text-slate-900 dark:text-white">
-                      {formatCurrency(Number(p.price))}
-                    </td>
-                    <td className="px-6 py-3.5">
-                      {p.stock <= 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 border border-rose-500/20 dark:text-rose-400">
-                          Esaurito ({p.stock})
+                      {p.cj_product_id ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
+                          CJ: {p.cj_product_id.slice(0, 10)}...
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 border border-emerald-500/20 dark:text-emerald-400">
-                          {p.stock} pz.
-                        </span>
+                        <span className="text-slate-400 text-[11px]">Catalogo Diretto</span>
                       )}
                     </td>
+
+                    <td className="px-6 py-3.5 text-slate-600 dark:text-slate-300">
+                      {p.category?.name || <span className="text-slate-400 italic">Nessuna</span>}
+                    </td>
+
+                    <td className="px-6 py-3.5">
+                      <div className="font-black text-slate-900 dark:text-white">
+                        {formatCurrency(p.price)}
+                      </div>
+                      {p.cost_price && (
+                        <div className="text-[10px] text-slate-400">
+                          Costo: {formatCurrency(p.cost_price)}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-3.5">
+                      {p.stock > 5 ? (
+                        <Badge variant="success">{p.stock} pz</Badge>
+                      ) : p.stock > 0 ? (
+                        <Badge variant="secondary">Ultime {p.stock} pz</Badge>
+                      ) : (
+                        <Badge variant="destructive">Esaurito</Badge>
+                      )}
+                    </td>
+
                     <td className="px-6 py-3.5">
                       <button
-                        onClick={() => toggleProductActive(p)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${
+                        onClick={() => toggleProductActive(p.id, p.is_active)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
                           p.is_active
-                            ? 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/25 dark:bg-emerald-950/70 dark:text-emerald-300'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
                         }`}
                       >
-                        {p.is_active ? 'Attivo' : 'Nascosto'}
+                        <span className={`h-1.5 w-1.5 rounded-full ${p.is_active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        {p.is_active ? 'Online' : 'Nascosto'}
                       </button>
                     </td>
-                    <td className="px-6 py-3.5 text-right space-x-1">
-                      <button
-                        onClick={() => openEditModal(p)}
-                        className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-                        title="Modifica"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id, p.name)}
-                        className="rounded-full p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
-                        title="Elimina"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+
+                    <td className="px-6 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors"
+                          title="Modifica"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -336,115 +447,192 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Modal Add / Edit */}
+      {/* Modal: Importazione CJdropshipping */}
       <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingProduct ? 'Modifica Prodotto' : 'Nuovo Prodotto'}
-        className="max-w-2xl"
+        isOpen={cjModalOpen}
+        onClose={() => setCjModalOpen(false)}
+        title="Importa Prodotto da CJdropshipping"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-          {errorMsg && (
-            <div className="flex items-center gap-2 p-3 text-xs text-red-600 bg-red-50 rounded-xl">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
+        <form onSubmit={handleCjImport} className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-indigo-900 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-200 text-xs leading-relaxed">
+            Inserisci il <strong>PID</strong> (Product ID) di CJdropshipping o l'URL della scheda prodotto. Il sistema scaricherà automaticamente titolo, immagini in alta risoluzione, tutte le varianti (vid), pesi per il calcolo spedizione e applicherà il ricarico percentuale impostato.
+          </div>
+
+          {cjMessage && (
+            <div
+              className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                cjMessage.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+              }`}
+            >
+              {cjMessage.type === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              )}
+              <span>{cjMessage.text}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Nome Prodotto"
-              placeholder="es. Sneakers Limited Edition"
-              required
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-            />
+          <Input
+            label="PID o Link Prodotto CJdropshipping *"
+            placeholder="es. 184518294819 o https://cjdropshipping.com/product-detail/..."
+            value={cjProductIdOrUrl}
+            onChange={(e) => setCjProductIdOrUrl(e.target.value)}
+            required
+          />
 
-            <Input
-              label="Slug Univoco"
-              placeholder="es. sneakers-limited-edition"
-              required
-              value={slug}
-              onChange={(e) => setSlug(slugify(e.target.value))}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Categoria
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Categoria Destinazione
               </label>
               <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                value={cjSelectedCategory}
+                onChange={(e) => setCjSelectedCategory(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
-                <option value="">Nessuna Categoria</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
             </div>
 
             <Input
-              label="Prezzo (€)"
+              label="Margine Ricarico % *"
+              type="number"
+              placeholder="40"
+              value={cjMarkupPercentage}
+              onChange={(e) => setCjMarkupPercentage(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCjModalOpen(false)}
+            >
+              Chiudi
+            </Button>
+            <Button type="submit" isLoading={cjImporting} size="sm">
+              <DownloadCloud className="h-4 w-4 mr-1.5" />
+              Avvia Importazione
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Aggiungi / Modifica Prodotto Manuale */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingProduct ? 'Modifica Prodotto' : 'Nuovo Prodotto a Catalogo'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <Input
+            label="Nome Prodotto *"
+            placeholder="es. Anello Aura Diamond"
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            required
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Slug Univoco *"
+              placeholder="anello-aura-diamond"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              required
+            />
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Categoria
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Prezzo (€) *"
               type="number"
               step="0.01"
-              placeholder="99.99"
-              required
+              placeholder="99.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              required
             />
 
             <Input
-              label="Giacenza Magazzino (Stock)"
+              label="Giacenza Stock *"
               type="number"
               placeholder="10"
-              required
               value={stock}
               onChange={(e) => setStock(e.target.value)}
+              required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Descrizione Dettagliata
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Descrizione
             </label>
             <textarea
               rows={3}
-              placeholder="Descrizione completa con specifiche, taglie e materiali..."
+              placeholder="Dettagli, materiali pregiati, dimensioni e cura del prodotto..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
 
-          {/* Upload Immagine su Supabase Storage */}
-          <div className="space-y-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50">
-            <span className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Immagine Prodotto (Supabase Storage: bucket 'products-images')
-            </span>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-sm text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
-                <Upload className="h-4 w-4" />
-                {uploadingFile ? 'Caricamento Storage...' : 'Carica File Immagine'}
+          {/* Immagine */}
+          <div className="p-3.5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/30">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Immagine Prodotto
+            </label>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+                <Upload className="h-3.5 w-3.5" />
+                <span>{uploadingFile ? 'Caricamento...' : 'Carica da File'}</span>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleFileUpload}
-                  className="hidden"
                   disabled={uploadingFile}
+                  className="hidden"
                 />
               </label>
 
-              <span className="text-xs text-slate-400">oppure inserisci URL:</span>
-
               <input
                 type="text"
-                placeholder="https://..."
+                placeholder="oppure incolla URL pubblico https://..."
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 className="flex-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
@@ -504,4 +692,3 @@ export default function AdminProductsPage() {
     </div>
   );
 }
-

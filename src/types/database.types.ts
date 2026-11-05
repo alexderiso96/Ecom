@@ -1,11 +1,3 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
-
 export type UserRole = 'customer' | 'admin' | 'superadmin';
 
 export type FulfillmentStatus =
@@ -160,57 +152,4 @@ export interface CjWebhookEventRecord {
   error_message: string | null;
   created_at: string;
   processed_at: string | null;
-}
-
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: Profile;
-        Insert: any;
-        Update: any;
-      };
-      categories: {
-        Row: Category;
-        Insert: any;
-        Update: any;
-      };
-      products: {
-        Row: Product;
-        Insert: any;
-        Update: any;
-      };
-      product_variants: {
-        Row: ProductVariant;
-        Insert: any;
-        Update: any;
-      };
-      orders: {
-        Row: Order;
-        Insert: any;
-        Update: any;
-      };
-      order_items: {
-        Row: OrderItem;
-        Insert: any;
-        Update: any;
-      };
-      cj_credentials: {
-        Row: CjCredentialsRow;
-        Insert: any;
-        Update: any;
-      };
-      cj_webhook_events: {
-        Row: CjWebhookEventRecord;
-        Insert: any;
-        Update: any;
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: {
-      user_role: UserRole;
-      fulfillment_status: FulfillmentStatus;
-    };
-  };
 }

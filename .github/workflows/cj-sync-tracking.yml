@@ -1,0 +1,27 @@
+name: CJ Order Tracking Sync (Zero-Cost Cron)
+
+on:
+  schedule:
+    # Esegue il recupero tracking ogni 2 ore
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Permette trigger manuale con un click dalla dashboard GitHub Actions
+
+jobs:
+  sync-tracking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Tracking Sync via Next.js Protected API
+        run: |
+          echo "Avvio sincronizzazione numeri di tracciamento CJdropshipping..."
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X GET "${{ secrets.APP_URL }}/api/cj/sync/tracking" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          echo "HTTP Status Code: $HTTP_STATUS"
+          cat response.json
+          
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Errore durante la sincronizzazione dei tracking!"
+            exit 1
+          fi
+
