@@ -23,7 +23,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const customerName = (body.customerName || 'Cliente').trim();
     const totalPrice = Number(body.totalPrice);
 
     if (isNaN(totalPrice) || totalPrice < 0) {
@@ -38,6 +37,17 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // Recupera email e nome con fallback sicuro dall'utente autenticato Supabase
+    const customerEmail =
+      body.customerEmail?.trim() ||
+      user?.email ||
+      null;
+
+    const customerName =
+      (body.customerName || '').trim() ||
+      user?.user_metadata?.full_name ||
+      (customerEmail ? customerEmail.split('@')[0] : 'Cliente');
+
     // Genera codice identificativo univoco (es. AURA-894213)
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `AURA-${Date.now().toString().slice(-4)}${randomSuffix}`;
@@ -49,7 +59,7 @@ export async function POST(request: Request) {
         order_number: orderNumber,
         user_id: user?.id || null,
         customer_name: customerName,
-        customer_email: body.customerEmail?.trim() || null,
+        customer_email: customerEmail,
         customer_phone: body.customerPhone?.trim() || null,
         shipping_address: body.shippingAddress?.trim() || null,
         notes: body.customerNotes?.trim() || null,

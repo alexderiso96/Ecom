@@ -16,6 +16,7 @@ import {
   Eye,
   AlertCircle,
   RefreshCw,
+  Mail,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Order, OrderStatus } from '@/types/database.types';
@@ -282,8 +283,20 @@ export default function AdminOrdersPage() {
                         <div className="font-bold text-slate-900 dark:text-white">
                           {order.customer_name}
                         </div>
+                        {order.customer_email && (
+                          <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1 mt-0.5">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <a
+                              href={`mailto:${order.customer_email}`}
+                              className="hover:underline truncate max-w-[180px]"
+                              title={order.customer_email}
+                            >
+                              {order.customer_email}
+                            </a>
+                          </div>
+                        )}
                         {order.customer_phone && (
-                          <div className="text-[11px] text-slate-400 font-mono">
+                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                             {order.customer_phone}
                           </div>
                         )}
@@ -367,12 +380,22 @@ export default function AdminOrdersPage() {
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
                   Dati Destinatario
                 </span>
-                <div className="space-y-1">
-                  <div className="font-bold text-slate-900 dark:text-white">
+                <div className="space-y-1.5">
+                  <div className="font-bold text-slate-900 dark:text-white text-sm">
                     {selectedOrder.customer_name}
                   </div>
-                  {selectedOrder.customer_email && (
-                    <div className="text-slate-500">{selectedOrder.customer_email}</div>
+                  {selectedOrder.customer_email ? (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      <a
+                        href={`mailto:${selectedOrder.customer_email}`}
+                        className="hover:underline"
+                      >
+                        {selectedOrder.customer_email}
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400 italic">Nessuna email registrata</div>
                   )}
                   {selectedOrder.customer_phone && (
                     <div className="flex items-center gap-2 pt-1">

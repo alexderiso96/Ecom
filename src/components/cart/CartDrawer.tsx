@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { formatCurrency, buildWhatsAppCheckoutUrl } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
@@ -28,14 +28,26 @@ export function CartDrawer() {
   const [customerNotes, setCustomerNotes] = useState('');
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null);
 
-  // Precarica i dati utente se già loggato
+  // Precarica i dati utente da localStorage o se già loggato con Supabase Auth
   useEffect(() => {
+    // 1. Prova da cache locale per clienti abituali o non registrati
+    try {
+      const savedEmail = localStorage.getItem('aura_customer_email');
+      if (savedEmail) setCustomerEmail(savedEmail);
+      const savedName = localStorage.getItem('aura_customer_name');
+      if (savedName) setCustomerName(savedName);
+      const savedPhone = localStorage.getItem('aura_customer_phone');
+      if (savedPhone) setCustomerPhone(savedPhone);
+    } catch {}
+
+    // 2. Precarica da Supabase Auth se autenticato
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setCustomerEmail(user.email || '');
+        if (user.email) setCustomerEmail(user.email);
         supabase
           .from('profiles')
           .select('full_name, phone')
@@ -71,20 +83,37 @@ export function CartDrawer() {
 
   const handleWhatsAppCheckout = async () => {
     if (items.length === 0 || isSubmittingOrder) return;
+
+    // Validazione obbligatoria dell'email cliente
+    const trimmedEmail = customerEmail.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setEmailError('Inserisci un indirizzo email valido per registrare il tuo ordine.');
+      return;
+    }
+    setEmailError('');
+
+    // Salva in localStorage per facilitare i prossimi ordini
+    try {
+      localStorage.setItem('aura_customer_email', trimmedEmail);
+      if (customerName.trim()) localStorage.setItem('aura_customer_name', customerName.trim());
+      if (customerPhone.trim()) localStorage.setItem('aura_customer_phone', customerPhone.trim());
+    } catch {}
+
     setIsSubmittingOrder(true);
 
     let generatedOrderNumber: string | undefined;
 
     try {
-      // 1. Salva l'ordine su Supabase con codice univoco
+      // 1. Salva l'ordine su Supabase con codice univoco ed email cliente
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items,
           totalPrice,
-          customerName: customerName.trim() || undefined,
-          customerEmail: customerEmail.trim() || undefined,
+          customerName: customerName.trim() || trimmedEmail.split('@')[0],
+          customerEmail: trimmedEmail,
           customerPhone: customerPhone.trim() || undefined,
           shippingAddress: shippingAddress.trim() || undefined,
           customerNotes: customerNotes.trim() || undefined,
@@ -104,13 +133,13 @@ export function CartDrawer() {
       setIsSubmittingOrder(false);
     }
 
-    // 2. Genera il messaggio WhatsApp includendo il codice ordine
+    // 2. Genera il messaggio WhatsApp includendo il codice ordine e i dettagli completi
     const whatsappUrl = buildWhatsAppCheckoutUrl({
       items,
       totalPrice,
       orderNumber: generatedOrderNumber,
-      customerName: customerName.trim() || undefined,
-      customerEmail: customerEmail.trim() || undefined,
+      customerName: customerName.trim() || trimmedEmail.split('@')[0],
+      customerEmail: trimmedEmail,
       customerPhone: customerPhone.trim() || undefined,
       shippingAddress: shippingAddress.trim() || undefined,
       customerNotes: customerNotes.trim() || undefined,
@@ -258,64 +287,96 @@ export function CartDrawer() {
               ))
             )}
 
-            {/* Optional Customer Information */}
+            {/* Customer Information */}
             {items.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCheckoutForm(!showCheckoutForm)}
-                  className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-900 dark:text-slate-300 transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                    Dati di spedizione (opzionali)
-                  </span>
-                  <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-                    {showCheckoutForm ? 'Chiudi' : 'Compila ora'}
-                  </span>
-                </button>
-
-                {showCheckoutForm && (
-                  <div className="mt-3 p-3 rounded-2xl border border-slate-200/70 bg-white space-y-2.5 text-left dark:border-slate-800 dark:bg-slate-900">
-                    <Input
-                      label="Il tuo Nome"
-                      placeholder="es. Mario Rossi"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      placeholder="mario.rossi@example.com"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                    />
-                    <Input
-                      label="Numero di Telefono"
-                      placeholder="+39 333 1234567"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                    />
-                    <Input
-                      label="Indirizzo di Spedizione"
-                      placeholder="Via Roma 10, 00100 Roma (RM)"
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                    />
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Note speciali
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Taglie specifiche, citofono o preferenze di consegna..."
-                        value={customerNotes}
-                        onChange={(e) => setCustomerNotes(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      />
-                    </div>
+              <div className="mt-4 pt-4 border-t border-slate-200/70 dark:border-slate-800 space-y-3">
+                {/* Email (Sempre Visibile) */}
+                <div className="p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 dark:border-indigo-900/40 dark:bg-indigo-950/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      <Mail className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>La tua Email</span>
+                      <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      Conferma & Tracking
+                    </span>
                   </div>
-                )}
+
+                  <input
+                    type="email"
+                    placeholder="mario.rossi@example.com"
+                    value={customerEmail}
+                    onChange={(e) => {
+                      setCustomerEmail(e.target.value);
+                      if (emailError) setEmailError('');
+                    }}
+                    className={`w-full rounded-xl border bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 shadow-2xs focus:outline-none transition-all dark:bg-slate-900 dark:text-white ${
+                      emailError
+                        ? 'border-rose-400 ring-2 ring-rose-400/20'
+                        : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700'
+                    }`}
+                  />
+
+                  {emailError && (
+                    <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{emailError}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Dati Opzionali (Nome, Telefono, Indirizzo, Note) */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCheckoutForm(!showCheckoutForm)}
+                    className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-900 dark:text-slate-300 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                      Dati di spedizione aggiuntivi (opzionali)
+                    </span>
+                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                      {showCheckoutForm ? 'Comprimi' : 'Compila ora'}
+                    </span>
+                  </button>
+
+                  {showCheckoutForm && (
+                    <div className="mt-2.5 p-3 rounded-2xl border border-slate-200/70 bg-white space-y-2.5 text-left dark:border-slate-800 dark:bg-slate-900">
+                      <Input
+                        label="Il tuo Nome"
+                        placeholder="es. Mario Rossi"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                      />
+                      <Input
+                        label="Numero di Telefono"
+                        placeholder="+39 333 1234567"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                      />
+                      <Input
+                        label="Indirizzo di Spedizione"
+                        placeholder="Via Roma 10, 00100 Roma (RM)"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Note speciali
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Taglie specifiche, citofono o preferenze di consegna..."
+                          value={customerNotes}
+                          onChange={(e) => setCustomerNotes(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
