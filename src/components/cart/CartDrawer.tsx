@@ -64,7 +64,10 @@ export function CartDrawer() {
   // Chiudi con tasto ESC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeCart();
+      if (e.key === 'Escape') {
+        setLastCreatedOrder(null);
+        closeCart();
+      }
     };
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -146,6 +149,9 @@ export function CartDrawer() {
     });
 
     window.open(whatsappUrl, '_blank');
+
+    // 3. Svuota completamente il carrello dopo il checkout su WhatsApp
+    clearCart();
   };
 
   return (
@@ -153,7 +159,10 @@ export function CartDrawer() {
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
-        onClick={closeCart}
+        onClick={() => {
+          setLastCreatedOrder(null);
+          closeCart();
+        }}
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
@@ -180,7 +189,10 @@ export function CartDrawer() {
             </div>
 
             <button
-              onClick={closeCart}
+              onClick={() => {
+                setLastCreatedOrder(null);
+                closeCart();
+              }}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
             >
               <X className="h-4 w-4" />
@@ -190,25 +202,51 @@ export function CartDrawer() {
           {/* Cart Item List */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-thin">
             {items.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-16">
-                <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 dark:bg-slate-900 dark:text-slate-600 mb-4">
-                  <ShoppingBag className="h-9 w-9 stroke-[1.2]" />
+              lastCreatedOrder ? (
+                <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4">
+                  <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 mb-4 animate-bounce">
+                    <CheckCircle2 className="h-9 w-9 stroke-[2]" />
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    Ordine Inviato su WhatsApp!
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-xs mt-2 mb-3">
+                    La conversazione con il nostro supporto è stata avviata e il carrello è stato svuotato con successo.
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mb-6">
+                    Codice Ordine: <span className="text-indigo-600 dark:text-indigo-400">{lastCreatedOrder}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLastCreatedOrder(null);
+                      closeCart();
+                    }}
+                    className="rounded-full bg-slate-900 text-white hover:bg-slate-800 px-6 py-2.5 text-xs font-bold shadow-sm transition-all dark:bg-white dark:text-slate-900"
+                  >
+                    Continua lo Shopping
+                  </button>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Il tuo carrello è vuoto
-                </h3>
-                <p className="text-xs text-slate-500 max-w-xs mt-1 mb-6">
-                  Esplora il catalogo di Aura Store e seleziona i tuoi prodotti esclusivi.
-                </p>
-                <button
-                  onClick={closeCart}
-                  className="rounded-full bg-slate-900 text-white hover:bg-slate-800 px-6 py-2.5 text-xs font-bold shadow-sm transition-all dark:bg-white dark:text-slate-900"
-                >
-                  <Link href="/catalog" onClick={closeCart}>
-                    Sfoglia il Catalogo
-                  </Link>
-                </button>
-              </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center py-16">
+                  <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 dark:bg-slate-900 dark:text-slate-600 mb-4">
+                    <ShoppingBag className="h-9 w-9 stroke-[1.2]" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Il tuo carrello è vuoto
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-xs mt-1 mb-6">
+                    Esplora il catalogo di Aura Store e seleziona i tuoi prodotti esclusivi.
+                  </p>
+                  <button
+                    onClick={closeCart}
+                    className="rounded-full bg-slate-900 text-white hover:bg-slate-800 px-6 py-2.5 text-xs font-bold shadow-sm transition-all dark:bg-white dark:text-slate-900"
+                  >
+                    <Link href="/catalog" onClick={closeCart}>
+                      Sfoglia il Catalogo
+                    </Link>
+                  </button>
+                </div>
+              )
             ) : (
               items.map((item) => (
                 <div
