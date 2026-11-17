@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Product, Category } from '@/types/database.types';
 import { CatalogClient } from '@/components/catalog/CatalogClient';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function CatalogPage() {
   let products: Product[] = [];

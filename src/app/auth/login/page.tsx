@@ -7,7 +7,7 @@ import { Sparkles, ArrowRight, CheckCircle2, Shield, User, KeyRound } from 'luci
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/Input';
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo');
 
@@ -226,5 +226,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="container py-16 text-center text-sm text-slate-500">Caricamento...</div>}>
+      <LoginForm />
+    </React.Suspense>
   );
 }

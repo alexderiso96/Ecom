@@ -133,7 +133,7 @@ const FALLBACK_FEATURED: Product[] = [
   },
 ];
 
-export const revalidate = 60; // Revalidate ISR ogni 60 secondi
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let featuredProducts: Product[] = [];
