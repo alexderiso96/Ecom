@@ -47,3 +47,37 @@ export interface CartItem {
   maxStock: number;
 }
 
+export type OrderStatus =
+  | 'whatsapp_pending'
+  | 'confirmed'
+  | 'processing'
+  | 'shipped'
+  | 'completed'
+  | 'cancelled';
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  product_name: string;
+  product_image: string | null;
+  price: number;
+  quantity: number;
+  created_at: string;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  user_id: string | null;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
+  shipping_address: string | null;
+  notes: string | null;
+  total_amount: number;
+  status: OrderStatus;
+  created_at: string;
+  updated_at: string;
+  order_items?: OrderItem[];
+}

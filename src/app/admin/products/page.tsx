@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { SeedButton } from '@/components/admin/SeedButton';
+import { validateProductInput, validateImageFile } from '@/lib/validation';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -89,25 +90,34 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Upload su Supabase Storage bucket 'products-images'
+  // Upload su Supabase Storage bucket 'products-images' con validazione di sicurezza
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // 1. Validazione preventiva sicurezza file (MIME type, estensione e dimensione max 5MB)
+    const fileValidation = validateImageFile(file);
+    if (!fileValidation.valid) {
+      setErrorMsg(fileValidation.error || 'File immagine non valido.');
+      return;
+    }
 
     setUploadingFile(true);
     setErrorMsg(null);
 
     try {
       const supabase = createClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      // Sanitizzazione nome file: solo timestamp numerico e token alfanumerico casuale (anti path-traversal)
+      const safeRandomToken = Math.random().toString(36).substring(2, 10);
+      const fileName = `${Date.now()}-${safeRandomToken}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('products-images')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
@@ -130,28 +140,28 @@ export default function AdminProductsPage() {
     setSaving(true);
     setErrorMsg(null);
 
-    const supabase = createClient();
-    const numericPrice = parseFloat(price);
-    const numericStock = parseInt(stock, 10);
+    // 2. Validazione rigorosa degli input tramite schema di validazione
+    const validation = validateProductInput({
+      name,
+      slug,
+      category_id: categoryId,
+      description,
+      price,
+      stock,
+      image_url: imageUrl,
+      is_featured: isFeatured,
+      is_active: isActive,
+    });
 
-    if (isNaN(numericPrice) || numericPrice < 0) {
-      setErrorMsg('Inserisci un prezzo valido.');
+    if (!validation.success || !validation.data) {
+      setErrorMsg(validation.error || 'Dati del prodotto non validi.');
       setSaving(false);
       return;
     }
 
     try {
-      const payload = {
-        name,
-        slug,
-        category_id: categoryId || null,
-        description: description || null,
-        price: numericPrice,
-        stock: isNaN(numericStock) ? 0 : numericStock,
-        image_url: imageUrl || null,
-        is_featured: isFeatured,
-        is_active: isActive,
-      };
+      const supabase = createClient();
+      const payload = validation.data;
 
       if (editingProduct) {
         const { error } = await supabase

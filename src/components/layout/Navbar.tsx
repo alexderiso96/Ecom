@@ -15,8 +15,10 @@ import {
   ChevronDown,
   Search,
   MessageCircle,
+  Heart,
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
 import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
@@ -35,6 +37,7 @@ export function Navbar() {
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
+  const totalWishlistItems = useWishlistStore((state) => state.items.length);
   const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
   // Scorciatoia rapida Cmd+K / Ctrl+K per dare focus immediato alla barra di ricerca
@@ -263,6 +266,25 @@ export function Navbar() {
                 </span>
               )}
             </button>
+
+            {/* Wishlist Link with Dynamic Badge */}
+            <Link
+              href="/wishlist"
+              className={`relative flex items-center justify-center h-10 w-10 rounded-full border transition-all duration-200 active:scale-95 shadow-sm ${
+                mounted && totalWishlistItems > 0
+                  ? 'border-rose-200 bg-rose-50/60 text-rose-600 hover:bg-rose-100/70 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400'
+                  : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+              }`}
+              aria-label="Lista dei Desideri"
+              title="I tuoi Preferiti"
+            >
+              <Heart className={`h-4 w-4 ${mounted && totalWishlistItems > 0 ? 'fill-current text-rose-500' : ''}`} />
+              {mounted && totalWishlistItems > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                  {totalWishlistItems}
+                </span>
+              )}
+            </Link>
 
             {/* User Profile Dropdown Pill */}
             {userProfile ? (

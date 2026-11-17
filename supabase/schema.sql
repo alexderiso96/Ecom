@@ -134,6 +134,37 @@ RETURNS BOOLEAN AS $$
     );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
+-- Trigger di Hardening: Anti-Privilege Escalation per la tabella profiles
+CREATE OR REPLACE FUNCTION public.protect_user_role_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.role IS DISTINCT FROM NEW.role AND NOT public.is_superadmin() THEN
+        RAISE EXCEPTION 'Accesso negato: solo un SuperAdmin può modificare i ruoli utente.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_protect_user_role_update ON public.profiles;
+CREATE TRIGGER trigger_protect_user_role_update
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.protect_user_role_update();
+
+CREATE OR REPLACE FUNCTION public.force_customer_role_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT public.is_superadmin() THEN
+        NEW.role := 'customer'::public.user_role;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_force_customer_role_insert ON public.profiles;
+CREATE TRIGGER trigger_force_customer_role_insert
+    BEFORE INSERT ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.force_customer_role_insert();
+
 -- ==============================================================================
 -- 10. ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================

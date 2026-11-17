@@ -4,6 +4,14 @@ import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/lib/seed-data';
 
 export async function POST(request: Request) {
   try {
+    // Salvaguardia Ambiente di Produzione: Impedisce la sovrascrittura accidentale del catalogo reale
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'L\'operazione di seed demo è disabilitata in ambiente di produzione per motivi di sicurezza.' },
+        { status: 403 }
+      );
+    }
+
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

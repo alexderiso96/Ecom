@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { formatCurrency, buildWhatsAppCheckoutUrl } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
@@ -27,6 +27,8 @@ export function CartDrawer() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null);
 
   // Precarica i dati utente se già loggato
   useEffect(() => {
@@ -67,12 +69,46 @@ export function CartDrawer() {
   const totalPrice = getTotalPrice();
   const totalItems = getTotalItems();
 
-  const handleWhatsAppCheckout = () => {
-    if (items.length === 0) return;
+  const handleWhatsAppCheckout = async () => {
+    if (items.length === 0 || isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
 
+    let generatedOrderNumber: string | undefined;
+
+    try {
+      // 1. Salva l'ordine su Supabase con codice univoco
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          totalPrice,
+          customerName: customerName.trim() || undefined,
+          customerEmail: customerEmail.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
+          shippingAddress: shippingAddress.trim() || undefined,
+          customerNotes: customerNotes.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.orderNumber) {
+          generatedOrderNumber = data.orderNumber;
+          setLastCreatedOrder(data.orderNumber);
+        }
+      }
+    } catch (err) {
+      console.warn('Salvataggio ordine offline o fallito, procedo comunque con WhatsApp:', err);
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+
+    // 2. Genera il messaggio WhatsApp includendo il codice ordine
     const whatsappUrl = buildWhatsAppCheckoutUrl({
       items,
       totalPrice,
+      orderNumber: generatedOrderNumber,
       customerName: customerName.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
@@ -185,6 +221,12 @@ export function CartDrawer() {
                       <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
                         {formatCurrency(item.price)}
                       </p>
+                      {item.maxStock > 0 && item.maxStock <= 3 && (
+                        <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                          <Flame className="h-3 w-3 animate-pulse text-amber-500" />
+                          <span>Ultime {item.maxStock} unità rimaste!</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Quantity Stepper Pill */}
@@ -304,13 +346,30 @@ export function CartDrawer() {
                 </span>
               </div>
 
+              {lastCreatedOrder && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/70 dark:border-indigo-800 dark:text-indigo-300 text-xs font-semibold">
+                  <CheckCircle2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                  <span>Ordine registrato a sistema: <b>{lastCreatedOrder}</b></span>
+                </div>
+              )}
+
               {/* High-impact WhatsApp Button */}
               <button
+                disabled={isSubmittingOrder}
                 onClick={handleWhatsAppCheckout}
-                className="w-full flex items-center justify-center gap-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 text-sm shadow-lg shadow-emerald-600/25 active:scale-[0.99] transition-all"
+                className="w-full flex items-center justify-center gap-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 text-sm shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-60 transition-all cursor-pointer"
               >
-                <MessageCircle className="h-4 w-4 stroke-[2.2]" />
-                <span>Procedi all'Ordine su WhatsApp</span>
+                {isSubmittingOrder ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Salvataggio ordine in corso...</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="h-4 w-4 stroke-[2.2]" />
+                    <span>Procedi all'Ordine su WhatsApp</span>
+                  </>
+                )}
               </button>
 
               <button

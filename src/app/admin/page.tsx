@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Layers, Package, AlertTriangle, Plus, ArrowRight } from 'lucide-react';
+import { Layers, Package, AlertTriangle, Plus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { SeedButton } from '@/components/admin/SeedButton';
 
@@ -9,15 +9,17 @@ export const revalidate = 0; // dynamic
 export default async function AdminDashboardPage() {
   const supabase = createClient();
 
-  const [categoriesRes, productsRes, outOfStockRes] = await Promise.all([
+  const [categoriesRes, productsRes, outOfStockRes, ordersRes] = await Promise.all([
     supabase.from('categories').select('*', { count: 'exact', head: true }),
     supabase.from('products').select('*', { count: 'exact', head: true }),
     supabase.from('products').select('*', { count: 'exact', head: true }).lte('stock', 0),
+    supabase.from('orders').select('*', { count: 'exact', head: true }),
   ]);
 
   const totalCategories = categoriesRes.count || 0;
   const totalProducts = productsRes.count || 0;
   const totalOutOfStock = outOfStockRes.count || 0;
+  const totalOrders = ordersRes.count || 0;
 
   return (
     <div className="space-y-8">
@@ -31,8 +33,28 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Totale Ordini
+            </span>
+            <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+              <ShoppingBag className="h-5 w-5 stroke-[1.8]" />
+            </div>
+          </div>
+          <div className="mt-3 text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            {totalOrders}
+          </div>
+          <Link
+            href="/admin/orders"
+            className="mt-3 inline-flex items-center text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400"
+          >
+            Gestisci ordini <ArrowRight className="h-3.5 w-3.5 ml-1" />
+          </Link>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Totale Prodotti
@@ -41,12 +63,12 @@ export default async function AdminDashboardPage() {
               <Package className="h-5 w-5 stroke-[1.8]" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="mt-3 text-3xl font-black text-slate-900 dark:text-white tracking-tight">
             {totalProducts}
           </div>
           <Link
             href="/admin/products"
-            className="mt-4 inline-flex items-center text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+            className="mt-3 inline-flex items-center text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
           >
             Gestisci prodotti <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Link>

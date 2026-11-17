@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Layers, Package, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { UserRole } from '@/types/database.types';
 
 interface AdminSidebarNavProps {
@@ -14,6 +14,7 @@ export function AdminSidebarNav({ userRole }: AdminSidebarNavProps) {
   const pathname = usePathname();
 
   const isOverviewActive = pathname === '/admin';
+  const isOrdersActive = pathname.startsWith('/admin/orders');
   const isCategoriesActive = pathname.startsWith('/admin/categories');
   const isProductsActive = pathname.startsWith('/admin/products');
   const isSuperAdminActive = pathname.startsWith('/superadmin');
@@ -30,6 +31,18 @@ export function AdminSidebarNav({ userRole }: AdminSidebarNavProps) {
       >
         <LayoutDashboard className={`h-4 w-4 ${isOverviewActive ? 'text-indigo-400 dark:text-indigo-600' : ''}`} />
         <span>Panoramica</span>
+      </Link>
+
+      <Link
+        href="/admin/orders"
+        className={`flex items-center gap-3 px-3.5 py-2.5 rounded-full transition-all duration-200 ${
+          isOrdersActive
+            ? 'bg-slate-900 text-white font-bold shadow-sm shadow-slate-900/10 dark:bg-white dark:text-slate-900'
+            : 'text-slate-600 font-semibold hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-white'
+        }`}
+      >
+        <ShoppingBag className={`h-4 w-4 ${isOrdersActive ? 'text-amber-400 dark:text-amber-600' : ''}`} />
+        <span>Gestione Ordini</span>
       </Link>
 
       <Link

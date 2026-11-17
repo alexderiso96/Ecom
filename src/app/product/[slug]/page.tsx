@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ShoppingBag, Truck, ShieldCheck, RefreshCw, Sparkles } from 'lucide-react';
+import { ChevronLeft, ShoppingBag, Truck, ShieldCheck, RefreshCw, Sparkles, Flame } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { Product } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
@@ -104,9 +104,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-700 border border-rose-500/20 backdrop-blur-md dark:text-rose-400">
                   Esaurito
                 </span>
-              ) : product.stock < 5 ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-700 border border-amber-500/20 backdrop-blur-md dark:text-amber-400">
-                  Solo {product.stock} rimasti!
+              ) : product.stock <= 5 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 border border-amber-400 animate-pulse">
+                  <Flame className="h-3.5 w-3.5 fill-current" />
+                  <span>Ultime {product.stock} unità rimaste!</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 border border-emerald-500/20 backdrop-blur-md dark:text-emerald-400">

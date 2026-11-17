@@ -9,6 +9,7 @@ import { slugify } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { validateCategoryInput } from '@/lib/validation';
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -71,6 +72,20 @@ export default function AdminCategoriesPage() {
     setSaving(true);
     setErrorMsg(null);
 
+    // Validazione preventiva schema categoria
+    const validation = validateCategoryInput({
+      name,
+      slug,
+      description,
+      image_url: imageUrl,
+    });
+
+    if (!validation.success || !validation.data) {
+      setErrorMsg(validation.error || 'Dati della categoria non validi.');
+      setSaving(false);
+      return;
+    }
+
     const supabase = createClient();
 
     try {
@@ -78,23 +93,13 @@ export default function AdminCategoriesPage() {
         // Update
         const { error } = await supabase
           .from('categories')
-          .update({
-            name,
-            slug,
-            description: description || null,
-            image_url: imageUrl || null,
-          })
+          .update(validation.data)
           .eq('id', editingCategory.id);
 
         if (error) throw error;
       } else {
         // Insert
-        const { error } = await supabase.from('categories').insert({
-          name,
-          slug,
-          description: description || null,
-          image_url: imageUrl || null,
-        });
+        const { error } = await supabase.from('categories').insert(validation.data);
 
         if (error) throw error;
       }

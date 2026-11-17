@@ -3,10 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Eye, Check } from 'lucide-react';
+import { ShoppingBag, Eye, Check, Heart, Flame } from 'lucide-react';
 import { Product } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
 import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
 
 interface ProductCardProps {
   product: Product;
@@ -14,8 +15,11 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem, items } = useCartStore();
+  const { toggleItem, isInWishlist } = useWishlistStore();
   const isInCart = items.some((item) => item.productId === product.id);
+  const isFavorite = isInWishlist(product.id);
   const isOutOfStock = product.stock <= 0;
+  const isLowStock = product.stock > 0 && product.stock <= 3;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -60,18 +64,41 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Floating Top Right Stock Pill Badge */}
-        <div className="absolute top-3 right-3 z-10">
+        {/* Floating Top Right Wishlist Button */}
+        <button
+          type="button"
+          aria-label={isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleItem(product);
+          }}
+          className={`absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-200 ${
+            isFavorite
+              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30 scale-105'
+              : 'bg-white/85 text-slate-500 hover:text-rose-500 hover:bg-white shadow-xs dark:bg-slate-900/85 dark:text-slate-300 dark:hover:text-rose-400'
+          }`}
+        >
+          <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+        </button>
+
+        {/* Floating Bottom Left Stock / FOMO Urgency Badge */}
+        <div className="absolute bottom-3 left-3 z-10">
           {isOutOfStock ? (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 border border-rose-500/20 backdrop-blur-md shadow-xs dark:text-rose-400">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-800 border border-rose-500/30 backdrop-blur-md shadow-xs dark:text-rose-300 dark:bg-rose-950/80">
               Esaurito
             </span>
-          ) : product.stock < 5 ? (
+          ) : isLowStock ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse border border-amber-400">
+              <Flame className="h-3 w-3 fill-slate-950 text-slate-950" />
+              <span>Ultime {product.stock} unità!</span>
+            </span>
+          ) : product.stock < 10 ? (
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 border border-amber-500/20 backdrop-blur-md shadow-xs dark:text-amber-400">
               Solo {product.stock} rimasti
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 border border-emerald-500/20 backdrop-blur-md shadow-xs dark:text-emerald-400">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/80 text-emerald-700 border border-emerald-500/20 backdrop-blur-md shadow-xs dark:bg-slate-900/80 dark:text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Disponibile
             </span>
