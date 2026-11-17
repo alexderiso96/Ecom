@@ -24,58 +24,22 @@ export function ProductFilters({
   onSortChange,
 }: ProductFiltersProps) {
   return (
-    <div className="space-y-4 my-8">
-      {/* Search Bar & Sort Dropdown */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        {/* Floating Pill Search Bar */}
-        <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Cerca prodotti per nome o parola chiave..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-full border border-slate-200/70 bg-white/80 pl-11 pr-10 py-2.5 text-xs font-medium text-slate-900 shadow-xs placeholder:text-slate-400 backdrop-blur-md focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:border-slate-400 transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Sort Select Pill */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <div className="relative inline-flex items-center">
-            <SlidersHorizontal className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-            <select
-              value={sortBy}
-              onChange={(e) => onSortChange(e.target.value)}
-              className="rounded-full border border-slate-200/70 bg-white/80 pl-9 pr-8 py-2.5 text-xs font-semibold text-slate-700 shadow-xs backdrop-blur-md hover:border-slate-300 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-200 cursor-pointer transition-all"
-            >
-              <option value="featured">In evidenza</option>
-              <option value="price-asc">Prezzo: dal più basso</option>
-              <option value="price-desc">Prezzo: dal più alto</option>
-              <option value="newest">Più recenti</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Category Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-1 scrollbar-none">
+    <div className="space-y-6 my-8 border-b border-stone-200/80 dark:border-stone-800/80 pb-6">
+      {/* 1. Category Bar - Horizontal Minimalist Luxury Tabs */}
+      <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto pb-2 scrollbar-none border-b border-stone-200/50 dark:border-stone-800/50">
         <button
+          type="button"
           onClick={() => onSelectCategory(null)}
-          className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+          className={`flex-shrink-0 text-[11px] tracking-[0.2em] uppercase transition-all duration-200 pb-2 relative cursor-pointer ${
             selectedCategory === null
-              ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/10 dark:bg-white dark:text-slate-900'
-              : 'bg-white/80 border border-slate-200/70 text-slate-600 hover:text-slate-900 hover:bg-white hover:border-slate-300 backdrop-blur-sm shadow-xs dark:bg-slate-900/70 dark:border-slate-800 dark:text-slate-300 dark:hover:text-white'
+              ? 'text-stone-950 dark:text-white font-semibold'
+              : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 font-normal'
           }`}
         >
-          Tutte le Categorie
+          <span>Tutte le Creazioni</span>
+          {selectedCategory === null && (
+            <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
+          )}
         </button>
 
         {categories.map((cat) => {
@@ -83,17 +47,68 @@ export function ProductFilters({
           return (
             <button
               key={cat.id}
+              type="button"
               onClick={() => onSelectCategory(cat.slug)}
-              className={`flex-shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`flex-shrink-0 text-[11px] tracking-[0.2em] uppercase transition-all duration-200 pb-2 relative cursor-pointer ${
                 isSelected
-                  ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/10 dark:bg-white dark:text-slate-900'
-                  : 'bg-white/80 border border-slate-200/70 text-slate-600 hover:text-slate-900 hover:bg-white hover:border-slate-300 backdrop-blur-sm shadow-xs dark:bg-slate-900/70 dark:border-slate-800 dark:text-slate-300 dark:hover:text-white'
+                  ? 'text-stone-950 dark:text-white font-semibold'
+                  : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200 font-normal'
               }`}
             >
-              {cat.name}
+              <span>{cat.name}</span>
+              {isSelected && (
+                <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
+              )}
             </button>
           );
         })}
+      </div>
+
+      {/* 2. Search & Sort Secondary Action Row */}
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between pt-1">
+        
+        {/* Minimal Search Field */}
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Cerca per articolo o materiale..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full pl-9 pr-8 py-2 bg-stone-50/70 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-xs font-light text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:focus:border-[#C5A880] transition-colors"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+              title="Azzera ricerca"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <span className="text-[10px] tracking-[0.18em] uppercase text-stone-400 font-medium hidden sm:inline">
+            Ordina:
+          </span>
+          <div className="relative inline-flex items-center">
+            <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none" />
+            <select
+              value={sortBy}
+              onChange={(e) => onSortChange(e.target.value)}
+              className="pl-8 pr-8 py-2 bg-stone-50/70 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-800 text-[11px] tracking-[0.08em] font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:border-stone-900 dark:focus:border-[#C5A880] cursor-pointer transition-colors"
+            >
+              <option value="featured">In Evidenza</option>
+              <option value="newest">Nuovi Arrivi</option>
+              <option value="price-asc">Prezzo: Crescente</option>
+              <option value="price-desc">Prezzo: Decrescente</option>
+            </select>
+          </div>
+        </div>
+
       </div>
     </div>
   );

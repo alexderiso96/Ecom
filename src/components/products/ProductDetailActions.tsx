@@ -30,27 +30,27 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   };
 
   const handleDirectWhatsApp = () => {
-    const message = `Ciao! Vorrei ordinare direttamente: *${product.name}* (Quantità: ${quantity}, Totale: €${(Number(product.price) * quantity).toFixed(2)}). È subito disponibile per la spedizione?`;
+    const message = `Salve! Desidero ordinare direttamente la creazione: *${product.name}* (Quantità: ${quantity}, Totale: €${(Number(product.price) * quantity).toFixed(2)}). Confermate la disponibilità immediata?`;
     window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleNotifyWhatsApp = () => {
-    const message = `Salve! Vorrei essere ricontattato non appena l'articolo *${product.name}* torna disponibile in magazzino.`;
+    const message = `Salve! Desidero ricevere una notifica su WhatsApp non appena l'articolo *${product.name}* torna disponibile nella vostra boutique.`;
     window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
-    <div className="space-y-4 pt-4 border-t border-slate-200/70 dark:border-slate-800">
-      {/* FOMO / Low Stock Urgency Banner */}
+    <div className="space-y-5 pt-6 border-t border-stone-200/80 dark:border-stone-800/80">
+      {/* Low Stock Urgency Notice */}
       {isLowStock && (
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-300">
+        <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-300">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-amber-500 fill-amber-500 animate-pulse flex-shrink-0" />
-            <span className="text-xs font-bold">
-              Affrettati! Solo <span className="underline decoration-amber-500 font-black">{product.stock} pezzi rimasti</span> a magazzino.
+            <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500 animate-pulse flex-shrink-0" />
+            <span className="text-xs font-medium">
+              Edizione limitata: restano solo <strong className="font-bold underline">{product.stock} unità</strong> disponibili.
             </span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-600 dark:text-amber-400">
             Richiesto
           </span>
         </div>
@@ -58,49 +58,49 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
 
       {/* Out of Stock Notice */}
       {isOutOfStock && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-800 dark:bg-rose-950/40 dark:border-rose-900/60 dark:text-rose-300 space-y-2">
-          <div className="text-xs font-bold">Articolo momentaneamente esaurito</div>
-          <p className="text-[11px] text-rose-700/80 dark:text-rose-400 leading-relaxed">
-            Stiamo riassortendo questo prodotto. Puoi richiederne la disponibilità o essere avvisato prioritariamente al rientro in stock:
+        <div className="p-4 bg-stone-100 border border-stone-200 dark:bg-stone-900/60 dark:border-stone-800 text-stone-800 dark:text-stone-200 space-y-3">
+          <div className="text-xs font-serif font-bold tracking-wide">Articolo Momentaneamente Esaurito</div>
+          <p className="text-xs font-light text-stone-500 dark:text-stone-400 leading-relaxed">
+            Stiamo riassortendo questo pezzo con la nostra bottega orafa. Puoi prenotare la tua priorità o chiedere una consulenza al nostro concierge:
           </p>
           <button
             type="button"
             onClick={handleNotifyWhatsApp}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-xs"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white hover:bg-stone-800 text-xs tracking-[0.16em] uppercase font-medium transition-all"
           >
-            <Bell className="h-3.5 w-3.5" />
-            <span>Avvisami su WhatsApp quando torna disponibile</span>
+            <Bell className="h-3.5 w-3.5 text-[#C5A880]" />
+            <span>Avvisami su WhatsApp al Rientro</span>
           </button>
         </div>
       )}
 
       {!isOutOfStock && (
         <>
-          {/* Quantity Stepper Pill */}
+          {/* Quantity Stepper & Wishlist */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
                 Quantità:
               </span>
-              <div className="flex items-center rounded-full border border-slate-200/80 bg-slate-50/80 p-1 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900">
                 <button
                   type="button"
                   disabled={quantity <= 1}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                  className="h-9 w-9 flex items-center justify-center text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white disabled:opacity-30 transition-colors"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3.5 w-3.5" />
                 </button>
-                <span className="w-10 text-center text-sm font-black text-slate-900 dark:text-white">
+                <span className="w-10 text-center text-xs font-bold text-stone-900 dark:text-white">
                   {quantity}
                 </span>
                 <button
                   type="button"
                   disabled={quantity >= maxAvailable}
                   onClick={() => setQuantity((q) => Math.min(maxAvailable, q + 1))}
-                  className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                  className="h-9 w-9 flex items-center justify-center text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white disabled:opacity-30 transition-colors"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -109,36 +109,36 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             <button
               type="button"
               onClick={() => toggleItem(product)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-bold transition-all duration-200 ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2 border text-xs tracking-[0.14em] uppercase transition-all duration-200 ${
                 isFavorite
-                  ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/50 dark:border-rose-900 dark:text-rose-400'
-                  : 'bg-white border-slate-200 text-slate-600 hover:text-rose-600 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'
+                  ? 'border-[#1C1917] bg-[#1C1917] text-[#C5A880] dark:border-stone-100 dark:bg-stone-100 dark:text-stone-950'
+                  : 'border-stone-300 text-stone-600 hover:border-stone-900 hover:text-stone-900 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-100'
               }`}
             >
-              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current text-rose-500' : ''}`} />
-              <span>{isFavorite ? 'Nei Preferiti' : 'Salva nei Preferiti'}</span>
+              <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-[#C5A880]' : ''}`} />
+              <span className="text-[10px] font-medium">{isFavorite ? 'Nei Preferiti' : 'Salva nei Preferiti'}</span>
             </button>
           </div>
 
-          {/* Buttons: Add to cart & Direct WhatsApp */}
+          {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               type="button"
               onClick={handleAddToCart}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-full h-12 text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
+              className={`flex-1 h-12 flex items-center justify-center gap-2.5 text-xs tracking-[0.2em] uppercase font-semibold transition-all duration-200 cursor-pointer ${
                 added
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                  : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100'
+                  ? 'bg-emerald-800 text-white'
+                  : 'bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-white shadow-subtle'
               }`}
             >
               {added ? (
                 <>
-                  <Check className="h-4 w-4 text-white" />
-                  <span>Aggiunto al Carrello!</span>
+                  <Check className="h-4 w-4 text-[#C5A880]" />
+                  <span>Aggiunto al Carrello</span>
                 </>
               ) : (
                 <>
-                  <ShoppingBag className="h-4 w-4" />
+                  <ShoppingBag className="h-4 w-4 stroke-[1.4]" />
                   <span>Aggiungi al Carrello</span>
                 </>
               )}
@@ -147,10 +147,10 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             <button
               type="button"
               onClick={handleDirectWhatsApp}
-              className="flex-1 flex items-center justify-center gap-2 rounded-full h-12 text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all"
+              className="flex-1 h-12 flex items-center justify-center gap-2 text-xs tracking-[0.18em] uppercase font-semibold border border-stone-300 hover:border-stone-900 dark:border-stone-700 dark:hover:border-stone-100 text-stone-900 dark:text-stone-100 transition-all cursor-pointer"
             >
-              <MessageCircle className="h-4 w-4 stroke-[2.2]" />
-              <span>Ordina Subito su WhatsApp</span>
+              <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Ordina via WhatsApp</span>
             </button>
           </div>
         </>

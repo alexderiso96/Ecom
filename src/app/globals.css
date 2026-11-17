@@ -1,68 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Warm Ivory & Natural Luxury Palette */
+    --background: 38 25% 98%; /* #FDFBF7 */
+    --foreground: 20 14% 12%; /* #1C1917 Neutral 900 */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 20 14% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 38 25% 98%;
+    --popover-foreground: 20 14% 12%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 20 14% 12%; /* Pure Charcoal #1C1917 */
+    --primary-foreground: 38 25% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 35 20% 95%; /* Linen / warm stone #F5F2EB */
+    --secondary-foreground: 20 14% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 35 15% 93%;
+    --muted-foreground: 25 6% 45%; /* Warm taupe #78716C */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 34 38% 64%; /* Champagne Gold #C5A880 */
+    --accent-foreground: 20 14% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 30 10% 90%; /* #E7E5E4 */
+    --input: 30 10% 90%;
+    --ring: 34 38% 64%;
 
-    --radius: 0.75rem;
+    --radius: 0.25rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Moody Obsidian / Midnight Warm Luxury */
+    --background: 24 10% 6%; /* Deep warm noir #100F0E */
+    --foreground: 38 20% 95%; /* Soft ivory text */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 24 10% 9%;
+    --card-foreground: 38 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 24 10% 8%;
+    --popover-foreground: 38 20% 95%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 38 20% 95%;
+    --primary-foreground: 24 10% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 24 10% 13%;
+    --secondary-foreground: 38 20% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 24 10% 14%;
+    --muted-foreground: 25 10% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 34 38% 64%; /* Champagne Gold */
+    --accent-foreground: 24 10% 6%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 24 10% 16%;
+    --input: 24 10% 16%;
+    --ring: 34 38% 64%;
   }
 }
 
@@ -71,21 +75,33 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
   }
 }
 
-/* Glassmorphism helpers */
+/* Luxury Editorial Styling Utilities */
+.letter-spacing-luxury {
+  letter-spacing: 0.18em;
+}
+
+.luxury-gradient-border {
+  border-image: linear-gradient(to right, transparent, #C5A880, transparent) 1;
+}
+
+/* Glassmorphism helpers refined for luxury warm tones */
 .glass {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(253, 251, 247, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .glass-dark {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(16, 15, 14, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
-

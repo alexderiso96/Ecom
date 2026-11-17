@@ -11,8 +11,6 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles,
-  ChevronDown,
   Search,
   MessageCircle,
   Heart,
@@ -31,6 +29,7 @@ export function Navbar() {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -40,18 +39,20 @@ export function Navbar() {
   const totalWishlistItems = useWishlistStore((state) => state.items.length);
   const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
-  // Scorciatoia rapida Cmd+K / Ctrl+K per dare focus immediato alla barra di ricerca
+  // Scorciatoia rapida Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        setSearchOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -59,6 +60,7 @@ export function Navbar() {
     const q = searchQuery.trim();
     if (q) {
       router.push(`/catalog?q=${encodeURIComponent(q)}`);
+      setSearchOpen(false);
     } else {
       router.push('/catalog');
     }
@@ -71,9 +73,7 @@ export function Navbar() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -114,179 +114,144 @@ export function Navbar() {
     window.location.href = '/';
   };
 
-  const navLinks = [
-    { label: 'Home', href: '/' },
-    { label: 'Catalogo Prodotti', href: '/catalog' },
+  // Categorie richieste per l'identità del brand (Gioielli, Borse, Donna, Uomo)
+  const boutiqueCategories = [
+    { label: 'Gioielli', href: '/catalog?category=gioielli' },
+    { label: 'Borse', href: '/catalog?category=borse' },
+    { label: 'Donna', href: '/catalog?category=donna' },
+    { label: 'Uomo', href: '/catalog?category=uomo' },
+    { label: 'Tutti i Prodotti', href: '/catalog' },
   ];
 
   return (
     <>
-      {/* 1. Top Announcement Ribbon */}
-      <div className="bg-slate-900 text-slate-200 text-[11px] font-medium py-1.5 px-4 text-center tracking-wide flex items-center justify-center gap-2 border-b border-slate-800 selection:bg-indigo-500">
-        <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="text-slate-300">
-          Spedizioni Express 24/48h • Ordini e assistenza diretta su WhatsApp
-        </span>
+      {/* 1. Top Ribbon - Minimalist Luxury */}
+      <div className="bg-[#1C1917] text-[#E7E5E4] text-[10px] tracking-[0.22em] font-medium py-2 px-4 text-center uppercase border-b border-stone-800/80 flex items-center justify-between sm:justify-center relative">
+        <span className="hidden sm:inline-block text-[#C5A880] mr-2">✦</span>
+        <span>Spedizione Assicurata 24/48h • Assistenza Personale su WhatsApp</span>
+        <span className="hidden sm:inline-block text-[#C5A880] ml-2">✦</span>
+
         <a
-          href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Salve, vorrei informazioni sui vostri prodotti.')}`}
+          href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Salve, vorrei una consulenza sui vostri gioielli e accessori.')}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:inline-flex items-center gap-1 font-bold text-emerald-400 hover:text-emerald-300 ml-1 transition-colors"
+          className="inline-flex sm:absolute sm:right-6 items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-[#C5A880] hover:text-[#EFE6D8] transition-colors"
         >
-          <MessageCircle className="h-3 w-3 inline" />
-          <span>Chat WhatsApp</span>
+          <MessageCircle className="h-3 w-3" />
+          <span className="hidden md:inline">Concierge</span>
         </a>
       </div>
 
-      {/* 2. Main Luxury Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/80 transition-all">
-        <div className="container flex h-16 items-center justify-between gap-4">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900 text-white shadow-sm ring-1 ring-slate-900/10 group-hover:scale-105 group-hover:shadow-indigo-500/20 transition-all dark:from-white dark:via-slate-200 dark:to-white dark:text-slate-950">
-              <Sparkles className="h-4 w-4 text-indigo-400 dark:text-indigo-600" />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">
-                AURA
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/70 dark:text-indigo-400">
-                STORE
-              </span>
-            </div>
-          </Link>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-slate-100/70 p-1 rounded-full border border-slate-200/60 dark:bg-slate-900/70 dark:border-slate-800/80">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  {link.label}
-                  {isActive && (
-                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-600 dark:bg-indigo-400" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Functional Interactive Search Bar */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden lg:flex items-center relative w-56 xl:w-64"
-          >
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cerca prodotti..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 rounded-full border border-slate-200/80 bg-slate-100/70 text-xs text-slate-900 placeholder:text-slate-400 backdrop-blur-md focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:bg-slate-900 dark:focus:border-slate-400 transition-all"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                title="Cancella testo"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            ) : (
-              <kbd className="hidden xl:inline-block absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-slate-400 bg-white/90 border border-slate-200/90 dark:bg-slate-800 dark:border-slate-700 px-1.5 py-0.5 rounded-md pointer-events-none">
-                ⌘K
-              </kbd>
-            )}
-          </form>
-
-          {/* Right Action Icons */}
-          <div className="flex items-center gap-2.5">
-            {/* Admin Badges with dynamic active states */}
-            {userProfile && (userProfile.role === 'admin' || userProfile.role === 'superadmin') && (
-              <Link
-                href="/admin"
-                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/10 font-bold dark:bg-white dark:text-slate-900'
-                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-900/40'
-                }`}
-              >
-                <Shield className={`h-3.5 w-3.5 ${pathname.startsWith('/admin') ? 'text-indigo-400 dark:text-indigo-600' : 'text-indigo-600 dark:text-indigo-400'}`} />
-                <span>Admin</span>
-              </Link>
-            )}
-
-            {userProfile && userProfile.role === 'superadmin' && (
-              <Link
-                href="/superadmin"
-                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  pathname.startsWith('/superadmin')
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 font-bold'
-                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-100 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-900/40'
-                }`}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>SuperAdmin</span>
-              </Link>
-            )}
-
-            {/* Cart Trigger with Dynamic Price & Counter */}
+      {/* 2. Main Luxury Boutique Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-stone-200/70 bg-[#FDFBF7]/90 backdrop-blur-xl dark:border-stone-800/70 dark:bg-[#100F0E]/90 transition-all">
+        <div className="container relative flex h-20 items-center justify-between">
+          
+          {/* LEFT: Category Navigation (Desktop) / Hamburger (Mobile) */}
+          <div className="flex items-center gap-6 flex-1">
             <button
-              onClick={openCart}
-              className={`relative flex items-center gap-2 h-10 px-3.5 rounded-full border transition-all duration-200 active:scale-95 shadow-sm ${
-                mounted && totalItems > 0
-                  ? 'border-indigo-200 bg-indigo-50/50 text-indigo-900 hover:bg-indigo-100/70 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200'
-                  : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
-              }`}
-              aria-label="Apri Carrello"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-1.5 -ml-1.5 text-stone-700 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white transition-colors"
+              aria-label="Apri Menu"
             >
-              <ShoppingBag className="h-4 w-4" />
-              {mounted && totalItems > 0 ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-black text-white">
-                    {totalItems}
-                  </span>
-                  <span className="text-xs font-bold hidden sm:inline-block">
-                    {formatCurrency(totalPrice)}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs font-semibold hidden sm:inline-block text-slate-500">
-                  Carrello
-                </span>
-              )}
+              {mobileMenuOpen ? <X className="h-5 w-5 stroke-[1.4]" /> : <Menu className="h-5 w-5 stroke-[1.4]" />}
             </button>
 
-            {/* Wishlist Link with Dynamic Badge */}
+            <nav className="hidden lg:flex items-center gap-6">
+              {boutiqueCategories.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`relative text-[11px] font-medium tracking-[0.18em] uppercase transition-colors duration-200 py-1 ${
+                      isActive
+                        ? 'text-stone-950 dark:text-white font-semibold'
+                        : 'text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100'
+                    }`}
+                  >
+                    {item.label}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 w-full h-[1px] bg-[#C5A880]" />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* CENTER: Centered Logo Boutique */}
+          <div className="flex-shrink-0 text-center">
+            <Link href="/" className="inline-flex flex-col items-center group">
+              <span className="font-serif text-2xl sm:text-3xl tracking-[0.32em] font-normal uppercase text-stone-900 dark:text-stone-100 group-hover:opacity-80 transition-opacity">
+                AURA
+              </span>
+              <span className="text-[7.5px] tracking-[0.38em] text-[#C5A880] font-sans uppercase -mt-0.5 font-medium">
+                ATELIER
+              </span>
+            </Link>
+          </div>
+
+          {/* RIGHT: Search, Wishlist, Cart & Profile */}
+          <div className="flex items-center justify-end gap-3 sm:gap-4 flex-1">
+            {/* Search Toggle Icon */}
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen(!searchOpen);
+                if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50);
+              }}
+              className="p-2 text-stone-600 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
+              aria-label="Cerca nel catalogo"
+              title="Cerca (⌘K)"
+            >
+              <Search className="h-4 w-4 stroke-[1.4]" />
+            </button>
+
+            {/* Wishlist Link with fine badge */}
             <Link
               href="/wishlist"
-              className={`relative flex items-center justify-center h-10 w-10 rounded-full border transition-all duration-200 active:scale-95 shadow-sm ${
-                mounted && totalWishlistItems > 0
-                  ? 'border-rose-200 bg-rose-50/60 text-rose-600 hover:bg-rose-100/70 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400'
-                  : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
-              }`}
-              aria-label="Lista dei Desideri"
+              className="relative p-2 text-stone-600 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
+              aria-label="Lista Desideri"
               title="I tuoi Preferiti"
             >
-              <Heart className={`h-4 w-4 ${mounted && totalWishlistItems > 0 ? 'fill-current text-rose-500' : ''}`} />
+              <Heart className={`h-4 w-4 stroke-[1.4] ${mounted && totalWishlistItems > 0 ? 'fill-[#C5A880] text-[#C5A880]' : ''}`} />
               {mounted && totalWishlistItems > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                <span className="absolute top-1 right-1 flex h-3.5 min-w-3.5 px-0.5 items-center justify-center rounded-full bg-[#1C1917] text-[8px] font-bold text-white dark:bg-stone-100 dark:text-stone-950">
                   {totalWishlistItems}
                 </span>
               )}
             </Link>
 
-            {/* User Profile Dropdown Pill */}
+            {/* Cart Trigger with fine badge */}
+            <button
+              onClick={openCart}
+              className="relative p-2 text-stone-600 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors flex items-center gap-2"
+              aria-label="Apri Carrello"
+            >
+              <ShoppingBag className="h-4 w-4 stroke-[1.4]" />
+              {mounted && totalItems > 0 ? (
+                <span className="flex h-3.5 min-w-3.5 px-1 items-center justify-center rounded-full bg-[#C5A880] text-[8px] font-bold text-stone-950">
+                  {totalItems}
+                </span>
+              ) : null}
+            </button>
+
+            {/* Admin Badges */}
+            {userProfile && (userProfile.role === 'admin' || userProfile.role === 'superadmin') && (
+              <Link
+                href="/admin"
+                className={`hidden md:inline-flex items-center gap-1 px-2.5 py-1 text-[9px] tracking-[0.16em] uppercase font-semibold border transition-all ${
+                  pathname.startsWith('/admin')
+                    ? 'border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-950'
+                    : 'border-stone-300 text-stone-700 hover:border-stone-900 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-100'
+                }`}
+              >
+                <Shield className="h-3 w-3 stroke-[1.5]" />
+                <span>Admin</span>
+              </Link>
+            )}
+
+            {/* User Profile / Login */}
             {userProfile ? (
               <div
                 ref={userMenuRef}
@@ -297,48 +262,40 @@ export function Navbar() {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((prev) => !prev)}
-                  className="flex h-10 items-center gap-2 pl-1.5 pr-2.5 rounded-full border border-slate-200/90 bg-white text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer transition-colors"
+                  className="p-2 text-stone-600 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors flex items-center gap-1.5"
                   aria-expanded={userMenuOpen}
                 >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                    {userProfile.full_name?.charAt(0).toUpperCase() ||
-                      userProfile.email.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-xs font-semibold max-w-[90px] truncate hidden md:inline-block">
+                  <User className="h-4 w-4 stroke-[1.4]" />
+                  <span className="text-[11px] tracking-[0.12em] uppercase font-medium max-w-[80px] truncate hidden xl:inline-block">
                     {userProfile.full_name?.split(' ')[0] || userProfile.email.split('@')[0]}
                   </span>
-                  <ChevronDown
-                    className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${
-                      userMenuOpen ? 'rotate-180 text-slate-700 dark:text-slate-200' : ''
-                    }`}
-                  />
                 </button>
 
                 {/* Dropdown Menu */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full pt-2 w-60 z-50 animate-fade-in">
-                    <div className="rounded-2xl bg-white p-2.5 shadow-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
-                      <div className="px-3 py-2.5">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {userProfile.full_name || 'Utente registrato'}
+                  <div className="absolute right-0 top-full pt-2 w-56 z-50 animate-fade-in">
+                    <div className="rounded-xs bg-[#FDFBF7] dark:bg-[#151413] p-3 shadow-luxury border border-stone-200 dark:border-stone-800 divide-y divide-stone-100 dark:divide-stone-800 text-left">
+                      <div className="pb-2.5">
+                        <p className="text-xs font-serif font-bold text-stone-900 dark:text-stone-100 truncate">
+                          {userProfile.full_name || 'Gentile Cliente'}
                         </p>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        <p className="text-[10px] text-stone-500 truncate mt-0.5">
                           {userProfile.email}
                         </p>
-                        <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                          Ruolo: {userProfile.role}
+                        <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-[0.16em] px-2 py-0.5 bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                          {userProfile.role}
                         </span>
                       </div>
 
-                      <div className="py-1">
+                      <div className="py-2 space-y-1">
                         {(userProfile.role === 'admin' || userProfile.role === 'superadmin') && (
                           <Link
                             href="/admin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                            className="flex items-center gap-2 px-2 py-1.5 text-xs text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
                           >
-                            <Shield className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                            Pannello Amministratore
+                            <Shield className="h-3.5 w-3.5 text-[#C5A880]" />
+                            <span>Pannello Admin</span>
                           </Link>
                         )}
 
@@ -346,34 +303,34 @@ export function Navbar() {
                           <Link
                             href="/superadmin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50 dark:text-purple-300 dark:hover:bg-purple-950/50 rounded-xl transition-colors"
+                            className="flex items-center gap-2 px-2 py-1.5 text-xs text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
                           >
-                            <ShieldCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            Control Room SuperAdmin
+                            <ShieldCheck className="h-3.5 w-3.5 text-purple-500" />
+                            <span>SuperAdmin Control</span>
                           </Link>
                         )}
 
                         <Link
-                          href="/catalog"
+                          href="/wishlist"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                          className="flex items-center gap-2 px-2 py-1.5 text-xs text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
                         >
-                          <Search className="h-4 w-4 text-slate-400" />
-                          Esplora Catalogo
+                          <Heart className="h-3.5 w-3.5 text-stone-400" />
+                          <span>Lista Desideri</span>
                         </Link>
                       </div>
 
-                      <div className="pt-1">
+                      <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => {
                             setUserMenuOpen(false);
                             handleLogout();
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer"
+                          className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-stone-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
                         >
-                          <LogOut className="h-4 w-4" />
-                          Disconnetti
+                          <LogOut className="h-3.5 w-3.5" />
+                          <span>Disconnetti</span>
                         </button>
                       </div>
                     </div>
@@ -383,89 +340,112 @@ export function Navbar() {
             ) : (
               <Link
                 href="/auth/login"
-                className="flex h-10 items-center gap-2 px-4 rounded-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-xs font-bold shadow-sm transition-all"
+                className="p-2 text-stone-600 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
+                aria-label="Accedi"
+                title="Accedi al tuo account"
               >
-                <User className="h-3.5 w-3.5" />
-                <span>Accedi</span>
+                <User className="h-4 w-4 stroke-[1.4]" />
               </Link>
             )}
-
-            {/* Mobile Hamburger Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/90 text-slate-700 dark:border-slate-800 dark:text-slate-300"
-              aria-label="Menu"
-            >
-              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-xl p-4 dark:border-slate-800 dark:bg-slate-950/95 space-y-2 animate-fade-in shadow-xl">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors ${
-                  pathname === link.href
-                    ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                    : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* Mobile Real Search Input */}
-            <form
-              onSubmit={(e) => {
-                setMobileMenuOpen(false);
-                handleSearch(e);
-              }}
-              className="relative my-2"
-            >
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Cerca prodotti e premi Invio..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pl-9 pr-9 rounded-full border border-slate-200 bg-slate-50 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-              />
-              {searchQuery && (
+        {/* Expandable Luxury Search Drawer */}
+        {searchOpen && (
+          <div className="border-t border-stone-200/80 bg-[#FAF8F5]/98 dark:border-stone-800 dark:bg-[#121110]/98 px-4 py-4 animate-fade-in shadow-subtle">
+            <div className="container max-w-2xl mx-auto">
+              <form onSubmit={handleSearch} className="relative flex items-center">
+                <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C5A880]" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Cerca gioielli, borse, accessori o codici..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-10 py-2.5 bg-transparent border-b border-stone-300 dark:border-stone-700 text-sm font-light text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:text-stone-100 dark:focus:border-[#C5A880] transition-colors"
+                />
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
-                  title="Cancella testo"
+                  onClick={() => setSearchOpen(false)}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 text-xs font-serif"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
+              </form>
+              <div className="flex items-center gap-4 mt-3 text-[10px] tracking-[0.16em] uppercase text-stone-400">
+                <span>Suggeriti:</span>
+                <Link
+                  href="/catalog?category=gioielli"
+                  onClick={() => setSearchOpen(false)}
+                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+                >
+                  Anelli
+                </Link>
+                <Link
+                  href="/catalog?category=gioielli"
+                  onClick={() => setSearchOpen(false)}
+                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+                >
+                  Collane
+                </Link>
+                <Link
+                  href="/catalog?category=borse"
+                  onClick={() => setSearchOpen(false)}
+                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+                >
+                  Borse in Pelle
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-stone-200/80 bg-[#FDFBF7] dark:border-stone-800 dark:bg-[#100F0E] p-6 space-y-4 animate-fade-in shadow-xl">
+            <div className="space-y-3">
+              {boutiqueCategories.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#C5A880] dark:text-stone-200 py-1 transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t border-stone-200 dark:border-stone-800 space-y-3">
+              <Link
+                href="/wishlist"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between text-xs tracking-[0.15em] uppercase text-stone-600 dark:text-stone-400 py-1"
+              >
+                <span>Lista dei Desideri</span>
+                <span className="font-bold text-[#C5A880]">{totalWishlistItems}</span>
+              </Link>
+              
+              <a
+                href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Salve, vorrei assistenza per un ordine.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs tracking-[0.15em] uppercase text-emerald-700 dark:text-emerald-400 py-1"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>Concierge WhatsApp</span>
+              </a>
+
+              {userProfile && (userProfile.role === 'admin' || userProfile.role === 'superadmin') && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-xs tracking-[0.15em] uppercase text-stone-900 font-bold py-1"
+                >
+                  Dashboard Amministratore
+                </Link>
               )}
-            </form>
-
-            {userProfile && (userProfile.role === 'admin' || userProfile.role === 'superadmin') && (
-              <Link
-                href="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40"
-              >
-                Dashboard Amministratore
-              </Link>
-            )}
-
-            {userProfile && userProfile.role === 'superadmin' && (
-              <Link
-                href="/superadmin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3.5 py-2.5 rounded-xl text-xs font-bold text-purple-600 bg-purple-50/50 dark:bg-purple-950/40"
-              >
-                Dashboard SuperAdmin (Gestione Utenti)
-              </Link>
-            )}
+            </div>
           </div>
         )}
       </header>

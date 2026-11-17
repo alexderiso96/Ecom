@@ -5,9 +5,9 @@ import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 
 export const metadata: Metadata = {
-  title: 'Aura Store | E-Commerce Diretto con Checkout WhatsApp',
+  title: 'AURA | Gioielli & Accessori Esclusivi',
   description:
-    'E-commerce moderno con gestione ruoli Supabase (Customer, Admin, SuperAdmin) e checkout istantaneo su WhatsApp.',
+    'Boutique di gioielli, borse ed elementi di stile femminile e maschile. Design minimale, materiali di pregio e checkout dedicato su WhatsApp.',
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="it" className="scroll-smooth">
-      <body className="min-h-screen flex flex-col bg-slate-50/50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+      <body className="min-h-screen flex flex-col bg-[#FDFBF7] text-[#1C1917] dark:bg-[#100F0E] dark:text-[#F5F5F4] antialiased selection:bg-[#C5A880]/30 selection:text-[#1C1917]">
         <Navbar />
         <main className="flex-1">{children}</main>
         <CartDrawer />
@@ -26,4 +26,3 @@ export default function RootLayout({
     </html>
   );
 }
-

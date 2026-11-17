@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
 import { Product, Category } from '@/types/database.types';
 import { ProductFilters } from '@/components/products/ProductFilters';
 import { ProductGrid } from '@/components/products/ProductGrid';
@@ -26,7 +25,7 @@ export function CatalogClient({
   const [searchQuery, setSearchQuery] = useState(initialQueryParam);
   const [sortBy, setSortBy] = useState('featured');
 
-  // Sincronizza lo stato quando l'utente cerca dalla barra di navigazione
+  // Sincronizza lo stato quando l'utente naviga o cerca dall'header
   useEffect(() => {
     const categoryFromUrl = searchParams.get('category');
     const queryFromUrl = searchParams.get('q') || searchParams.get('search') || '';
@@ -75,17 +74,17 @@ export function CatalogClient({
   }, [initialProducts, selectedCategory, searchQuery, sortBy]);
 
   return (
-    <div className="container py-10 md:py-14">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100/90 text-slate-700 border border-slate-200/70 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 mb-3">
-          <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> Collezione Completa
-        </div>
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-          Catalogo Aura
+    <div className="container py-12 md:py-16">
+      {/* Header Editoriale */}
+      <div className="mb-10 text-left border-b border-stone-200/80 dark:border-stone-800/80 pb-6">
+        <span className="text-[10px] tracking-[0.24em] font-semibold text-[#C5A880] uppercase block mb-2">
+          ✦ Collezione Aura Atelier
+        </span>
+        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
+          Il Catalogo Completo
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-xl font-normal leading-relaxed">
-          Esplora la nostra selezione di articoli dal design minimale. Aggiungi i prodotti al carrello e finalizza l'acquisto direttamente via WhatsApp con il nostro staff.
+        <p className="text-xs sm:text-sm font-light text-stone-500 dark:text-stone-400 mt-2 max-w-xl leading-relaxed">
+          Esplora creazioni uniche tra gioielli scultorei, borse in morbida pelle e raffinati accessori di stile. Ogni acquisto include l'assistenza personale su WhatsApp.
         </p>
       </div>
 
@@ -100,16 +99,16 @@ export function CatalogClient({
         onSortChange={setSortBy}
       />
 
-      {/* Risultati Badge */}
-      <div className="mb-6 flex items-center justify-between">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/80 border border-slate-200/70 text-slate-600 shadow-xs backdrop-blur-sm dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-300">
-          {filteredProducts.length} {filteredProducts.length === 1 ? 'prodotto trovato' : 'prodotti trovati'}
+      {/* Risultati Conteggio Discreto */}
+      <div className="mb-8 flex items-center justify-between text-xs tracking-[0.14em] uppercase text-stone-500 dark:text-stone-400 font-medium">
+        <span>
+          {filteredProducts.length} {filteredProducts.length === 1 ? 'Creazione disponibile' : 'Creazioni disponibili'}
         </span>
       </div>
 
       <ProductGrid
         products={filteredProducts}
-        emptyMessage="Nessun articolo corrisponde ai criteri selezionati. Prova a modificare i filtri o la ricerca."
+        emptyMessage="Nessun articolo corrisponde ai criteri selezionati. Modifica i filtri o la ricerca per esplorare le altre collezioni."
       />
     </div>
   );

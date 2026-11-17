@@ -1,38 +1,38 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Sparkles, Layers, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { Product, Category } from '@/types/database.types';
 import { Hero } from '@/components/home/Hero';
 import { ProductGrid } from '@/components/products/ProductGrid';
 
-// Mock fallback se il DB Supabase non è ancora connesso o è vuoto
+// Fallback mockup allineati al target: Gioielli & Borse femminili + Accessori maschili d'alta gamma
 const FALLBACK_CATEGORIES: Category[] = [
   {
     id: '1',
-    name: 'Abbigliamento',
-    slug: 'abbigliamento',
-    description: 'Capi contemporanei con tessuti pregiati e vestibilità ottimale',
-    image_url: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80',
+    name: 'Gioielli & Bijoux',
+    slug: 'gioielli',
+    description: 'Anelli scultorei, collane e bracciali rifiniti con metalli preziosi',
+    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=85',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
   {
     id: '2',
-    name: 'Accessori & Orologi',
-    slug: 'accessori',
-    description: 'Borse in pelle, orologi e dettagli che fanno la differenza',
-    image_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
+    name: 'Borse & Pelletteria',
+    slug: 'borse',
+    description: 'Borse a mano e tote in pelle pieno fiore conciata naturalmente',
+    image_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=85',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
   {
     id: '3',
-    name: 'Tech & Audio',
-    slug: 'tech-audio',
-    description: 'Dispositivi audio ad alta fedeltà e accessori smart da scrivania',
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80',
+    name: 'Accessori Donna & Uomo',
+    slug: 'accessori',
+    description: 'Portafogli, cinture e dettagli di stile per completare ogni outfit',
+    image_url: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=800&q=85',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -41,21 +41,21 @@ const FALLBACK_CATEGORIES: Category[] = [
 const FALLBACK_FEATURED: Product[] = [
   {
     id: 'p1',
-    category_id: '3',
-    name: 'Cuffie Wireless Hi-Fi Studio Pro',
-    slug: 'cuffie-wireless-hi-fi-studio-pro',
-    description: 'Cancellazione attiva del rumore e driver in grafene da 40mm con autonomia di 40 ore.',
-    price: 249.99,
-    image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-    stock: 15,
+    category_id: '1',
+    name: 'Collana Choker Aurora in Oro 18k',
+    slug: 'collana-choker-aurora-oro',
+    description: 'Design minimale con maglia fluida bagnata in oro 18 carati e chiusura invisibile.',
+    price: 320.0,
+    image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=85',
+    stock: 8,
     is_featured: true,
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     category: {
-      id: '3',
-      name: 'Tech & Audio',
-      slug: 'tech-audio',
+      id: '1',
+      name: 'Gioielli',
+      slug: 'gioielli',
       description: null,
       image_url: null,
       created_at: '',
@@ -65,20 +65,20 @@ const FALLBACK_FEATURED: Product[] = [
   {
     id: 'p2',
     category_id: '2',
-    name: 'Zaino Minimalista Urban Waterproof',
-    slug: 'zaino-minimalista-urban',
-    description: 'Tessuto idrorepellente riciclato con scomparto imbottito per laptop da 16 pollici.',
-    price: 119.0,
-    image_url: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80',
-    stock: 28,
+    name: 'Borsa Tote Sartoriale in Pelle',
+    slug: 'borsa-tote-sartoriale-pelle',
+    description: 'Pelle di vitello italiano con fodera in cotone organico e finiture metalliche in oro chiaro.',
+    price: 460.0,
+    image_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=85',
+    stock: 5,
     is_featured: true,
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     category: {
       id: '2',
-      name: 'Accessori & Orologi',
-      slug: 'accessori',
+      name: 'Borse',
+      slug: 'borse',
       description: null,
       image_url: null,
       created_at: '',
@@ -87,21 +87,21 @@ const FALLBACK_FEATURED: Product[] = [
   },
   {
     id: 'p3',
-    category_id: '2',
-    name: 'Orologio Cronografo Titanio Stealth',
-    slug: 'orologio-cronografo-titanio',
-    description: 'Cassa in titanio grado aeronautico e cinturino in pelle primo fiore.',
-    price: 340.0,
-    image_url: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=800&q=80',
-    stock: 7,
+    category_id: '1',
+    name: 'Bracciale Rigido Scultoreo in Argento 925',
+    slug: 'bracciale-rigido-scultoreo',
+    description: 'Forma organica martellata a mano per un riflesso di luce unico e sofisticato.',
+    price: 210.0,
+    image_url: 'https://images.unsplash.com/photo-1611591475155-42e9fba5ce55?auto=format&fit=crop&w=800&q=85',
+    stock: 12,
     is_featured: true,
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     category: {
-      id: '2',
-      name: 'Accessori & Orologi',
-      slug: 'accessori',
+      id: '1',
+      name: 'Gioielli',
+      slug: 'gioielli',
       description: null,
       image_url: null,
       created_at: '',
@@ -110,21 +110,21 @@ const FALLBACK_FEATURED: Product[] = [
   },
   {
     id: 'p4',
-    category_id: '1',
-    name: 'Giacca a Vento Modulare Techwear',
-    slug: 'giacca-vento-modulare',
-    description: 'Impermeabilità 20k, traspirabilità eccellente e cuciture termosaldate.',
-    price: 189.5,
-    image_url: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80',
-    stock: 12,
+    category_id: '3',
+    name: 'Portafoglio Bifold Uomo in Cuoio Nobile',
+    slug: 'portafoglio-bifold-uomo-cuoio',
+    description: 'Cuoio spazzolato a mano, 8 slot porta carte e scomparto banconote rifinito con precisione.',
+    price: 135.0,
+    image_url: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=800&q=85',
+    stock: 9,
     is_featured: true,
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     category: {
-      id: '1',
-      name: 'Abbigliamento',
-      slug: 'abbigliamento',
+      id: '3',
+      name: 'Accessori',
+      slug: 'accessori',
       description: null,
       image_url: null,
       created_at: '',
@@ -176,70 +176,66 @@ export default async function HomePage() {
   const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
   return (
-    <div className="space-y-4">
-      {/* 1. Hero Section */}
+    <div className="space-y-16 sm:space-y-24">
+      {/* 1. Haute Couture Hero Section */}
       <Hero />
 
-      {/* 2. Categorie in Evidenza */}
-      <section className="container py-14">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+      {/* 2. Categorie Iconiche */}
+      <section className="container">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 border-b border-stone-200/80 dark:border-stone-800/80 pb-5">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-50/80 text-indigo-600 border border-indigo-200/60 dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-400 mb-3">
-              <Layers className="h-3.5 w-3.5" /> Esplora per Settore
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              Collezioni Selezionate
+            <span className="text-[10px] tracking-[0.24em] font-semibold text-[#C5A880] uppercase block mb-2">
+              ✦ Collezioni Iconiche
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
+              L'Arte della Materia
             </h2>
           </div>
           <Link
             href="/catalog"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200/80 bg-white/80 hover:bg-white hover:border-slate-300 text-xs font-bold text-slate-700 hover:text-slate-900 shadow-xs backdrop-blur-sm transition-all dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-300 dark:hover:text-white"
+            className="inline-flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-semibold text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
           >
-            <span>Tutte le collezioni</span>
+            <span>Tutte le Categorie</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {categories.slice(0, 3).map((category) => (
             <Link
               key={category.id}
               href={`/catalog?category=${category.slug}`}
-              className="group relative overflow-hidden rounded-3xl h-72 border border-slate-200/70 bg-slate-900 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-500 dark:border-slate-800"
+              className="group relative overflow-hidden aspect-[4/5] bg-stone-100 dark:bg-stone-900 border border-stone-200/70 dark:border-stone-800 transition-all duration-500 hover:shadow-luxury"
             >
               {category.image_url ? (
                 <Image
                   src={category.image_url}
                   alt={category.name}
                   fill
-                  className="object-cover opacity-85 transition-transform duration-700 ease-out group-hover:scale-105 group-hover:opacity-95"
+                  className="object-cover filter saturate-[0.95] transition-transform duration-1000 ease-out group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
               ) : (
-                <div className="h-full w-full bg-slate-800" />
+                <div className="h-full w-full bg-stone-200" />
               )}
-              {/* Overlay Gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              {/* Overlay Gradient Editoriale */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/20 to-transparent transition-opacity group-hover:opacity-90" />
 
-              <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                <span className="inline-flex items-center self-start px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-md border border-white/20 mb-2">
-                  Collezione
+              <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
+                <span className="text-[9px] tracking-[0.26em] uppercase text-[#EFE6D8] font-medium block mb-1">
+                  Atelier
                 </span>
-                <h3 className="text-xl font-black text-white group-hover:text-indigo-200 transition-colors tracking-tight">
+                <h3 className="font-serif text-2xl font-normal text-white group-hover:text-[#EFE6D8] transition-colors tracking-wide">
                   {category.name}
                 </h3>
                 {category.description && (
-                  <p className="text-xs text-slate-300 line-clamp-1 mt-1 font-normal">
+                  <p className="text-xs font-light text-stone-300 line-clamp-1 mt-1">
                     {category.description}
                   </p>
                 )}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-white/90">
-                    Esplora articoli
-                  </span>
-                  <div className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:bg-white group-hover:text-slate-900 group-hover:translate-x-1 transition-all">
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </div>
+                <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs tracking-[0.16em] uppercase font-medium">
+                  <span>Esplora Selezione</span>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             </Link>
@@ -247,23 +243,23 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. Prodotti in Evidenza */}
-      <section className="container py-12">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+      {/* 3. Creazioni in Evidenza */}
+      <section className="container">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 border-b border-stone-200/80 dark:border-stone-800/80 pb-5">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100/90 text-slate-700 border border-slate-200/70 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 mb-3">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> Scelti per te
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              Prodotti in Evidenza
+            <span className="text-[10px] tracking-[0.24em] font-semibold text-[#C5A880] uppercase block mb-2">
+              ✦ Selezione Curata
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
+              Creazioni in Evidenza
             </h2>
           </div>
 
           <Link
             href="/catalog"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200/80 bg-white/80 hover:bg-white hover:border-slate-300 text-xs font-bold text-slate-800 shadow-xs backdrop-blur-sm transition-all dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-200"
+            className="inline-flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-semibold text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
           >
-            <span>Tutto il Catalogo</span>
+            <span>Catalogo Completo</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -271,40 +267,41 @@ export default async function HomePage() {
         <ProductGrid products={featuredProducts} />
       </section>
 
-      {/* 4. Luxury WhatsApp Checkout Banner */}
-      <section className="container my-16">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-8 sm:p-14 text-white shadow-2xl border border-slate-800">
-          {/* Ambient Glows */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 4. Luxury Concierge WhatsApp Experience */}
+      <section className="container">
+        <div className="relative overflow-hidden bg-[#1C1917] p-10 sm:p-16 text-white border border-[#C5A880]/30 shadow-luxury">
+          <div className="relative z-10 max-w-2xl space-y-5 text-left">
+            <span className="text-[10px] tracking-[0.26em] uppercase font-semibold text-[#C5A880] block">
+              ✦ Esperienza Sartoriale
+            </span>
 
-          <div className="relative z-10 max-w-2xl space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Zero Frizioni • Assistenza Umana Dedicata</span>
-            </div>
-
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.15]">
-              Acquista in 1-Click direttamente su WhatsApp.
+            <h3 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-white leading-[1.12]">
+              L'Assistenza Personale del tuo Concierge Privato.
             </h3>
 
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
-              Hai richieste particolari, preferenze di orario o vuoi concordare un metodo di pagamento personalizzato? Seleziona gli articoli nel carrello, clicca su Procedi e dialoga immediatamente con il nostro team.
+            <p className="text-xs sm:text-sm font-light text-stone-400 leading-relaxed">
+              Desideri una consulenza su una misura d'anello, consigli di abbinamento per un regalo o una spedizione speciale? Scegli i tuoi articoli e dialoga direttamente su WhatsApp con la nostra boutique.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Link
-                href="/catalog"
-                className="inline-flex items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-7 h-12 text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+            <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <a
+                href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Salve! Vorrei un consiglio per un ordine su misura.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                <span>Inizia lo Shopping</span>
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
+                <button
+                  type="button"
+                  className="h-12 px-8 bg-[#C5A880] text-stone-950 hover:bg-[#EFE6D8] text-xs tracking-[0.2em] uppercase font-semibold transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span>Avvia Chat WhatsApp</span>
+                </button>
+              </a>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>Nessuna carta richiesta in anticipo</span>
+              <div className="flex items-center gap-2 text-[11px] font-medium tracking-wide text-stone-400">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#C5A880]" />
+                <span>Risposta dedicata & senza registrazione</span>
               </div>
             </div>
           </div>
