@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2, Mail } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2, Mail, ShieldCheck, Lock } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { formatCurrency, buildWhatsAppCheckoutUrl } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
@@ -30,6 +30,18 @@ export function CartDrawer() {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null);
+
+  // Sistemi di sicurezza Anti-Bot & Anti-Abuso
+  const [honeypot, setHoneypot] = useState('');
+  const [drawerOpenedAt, setDrawerOpenedAt] = useState<number>(Date.now());
+
+  // Traccia timestamp apertura carrello per anti-speed bot
+  useEffect(() => {
+    if (isOpen) {
+      setDrawerOpenedAt(Date.now());
+      setEmailError('');
+    }
+  }, [isOpen]);
 
   // Precarica i dati utente da localStorage o se già loggato con Supabase Auth
   useEffect(() => {
@@ -87,6 +99,17 @@ export function CartDrawer() {
   const handleWhatsAppCheckout = async () => {
     if (items.length === 0 || isSubmittingOrder) return;
 
+    // Cooldown di sicurezza locale anti-doppio clic/spam compulsivo (30 secondi)
+    try {
+      const lastOrderTime = Number(sessionStorage.getItem('aura_last_order_ts') || '0');
+      const elapsed = Date.now() - lastOrderTime;
+      if (lastOrderTime && elapsed < 30000) {
+        const remaining = Math.ceil((30000 - elapsed) / 1000);
+        setEmailError(`Richiesta inviata di recente. Per motivi di sicurezza attendi ${remaining} secondi prima di un nuovo invio.`);
+        return;
+      }
+    } catch {}
+
     // Validazione obbligatoria dell'email cliente
     const trimmedEmail = customerEmail.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -108,7 +131,7 @@ export function CartDrawer() {
     let generatedOrderNumber: string | undefined;
 
     try {
-      // 1. Salva l'ordine su Supabase con codice univoco ed email cliente
+      // 1. Salva l'ordine su Supabase con codice univoco, filtri rate limiting e controlli anti-bot
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,23 +143,41 @@ export function CartDrawer() {
           customerPhone: customerPhone.trim() || undefined,
           shippingAddress: shippingAddress.trim() || undefined,
           customerNotes: customerNotes.trim() || undefined,
+          hp_website: honeypot,
+          clientTimestamp: drawerOpenedAt,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.orderNumber) {
-          generatedOrderNumber = data.orderNumber;
-          setLastCreatedOrder(data.orderNumber);
-        }
+      const data = await res.json();
+
+      // Controllo blocco Rate Limiting o Anti-Bot
+      if (res.status === 429 || res.status === 403) {
+        setEmailError(data.error || 'Invio bloccato dai sistemi di sicurezza anti-spam. Riprova più tardi.');
+        setIsSubmittingOrder(false);
+        return;
       }
-    } catch (err) {
-      console.warn('Salvataggio ordine offline o fallito, procedo comunque con WhatsApp:', err);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Errore durante la registrazione dell\'ordine.');
+      }
+
+      if (data.orderNumber) {
+        generatedOrderNumber = data.orderNumber;
+        setLastCreatedOrder(data.orderNumber);
+        try {
+          sessionStorage.setItem('aura_last_order_ts', String(Date.now()));
+        } catch {}
+      }
+    } catch (err: any) {
+      console.warn('Errore salvataggio ordine protetto:', err);
+      setEmailError(err.message || 'Errore di connessione. Riprova tra poco.');
+      setIsSubmittingOrder(false);
+      return;
     } finally {
       setIsSubmittingOrder(false);
     }
 
-    // 2. Genera il messaggio WhatsApp includendo il codice ordine e i dettagli completi
+    // 2. Genera il messaggio WhatsApp includendo il codice ordine verificato
     const whatsappUrl = buildWhatsAppCheckoutUrl({
       items,
       totalPrice,
@@ -203,25 +244,37 @@ export function CartDrawer() {
           <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-thin">
             {items.length === 0 ? (
               lastCreatedOrder ? (
-                <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4">
-                  <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 mb-4 animate-bounce">
-                    <CheckCircle2 className="h-9 w-9 stroke-[2]" />
+                <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4 space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/20 shadow-xs animate-bounce">
+                    <ShieldCheck className="h-8 w-8 stroke-[1.8]" />
                   </div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-white">
-                    Ordine Inviato su WhatsApp!
-                  </h3>
-                  <p className="text-xs text-slate-500 max-w-xs mt-2 mb-3">
-                    La conversazione con il nostro supporto è stata avviata e il carrello è stato svuotato con successo.
-                  </p>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mb-6">
-                    Codice Ordine: <span className="text-indigo-600 dark:text-indigo-400">{lastCreatedOrder}</span>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                      Verificato a Sistema
+                    </span>
+                    <h3 className="font-serif text-2xl text-stone-900 dark:text-white mt-2 font-normal">
+                      Ordine Inviato su WhatsApp
+                    </h3>
+                    <p className="text-xs text-stone-500 max-w-xs mt-2 mx-auto leading-relaxed">
+                      La conversazione con il Concierge è stata aperta con il riepilogo sicuro. Il carrello è stato svuotato.
+                    </p>
                   </div>
+
+                  <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80 dark:bg-stone-900/60 dark:border-stone-800 text-center w-full max-w-xs">
+                    <span className="block text-[10px] uppercase font-bold tracking-wider text-stone-400 mb-1">
+                      Codice Verifica Atelier
+                    </span>
+                    <span className="font-mono text-sm font-black text-stone-900 dark:text-stone-100 tracking-wider">
+                      #{lastCreatedOrder}
+                    </span>
+                  </div>
+
                   <button
                     onClick={() => {
                       setLastCreatedOrder(null);
                       closeCart();
                     }}
-                    className="rounded-full bg-slate-900 text-white hover:bg-slate-800 px-6 py-2.5 text-xs font-bold shadow-sm transition-all dark:bg-white dark:text-slate-900"
+                    className="rounded-full bg-stone-900 text-white hover:bg-stone-800 px-7 py-3 text-xs font-bold tracking-wider uppercase shadow-sm transition-all dark:bg-white dark:text-stone-900"
                   >
                     Continua lo Shopping
                   </button>
@@ -364,6 +417,23 @@ export function CartDrawer() {
                   )}
                 </div>
 
+                {/* Trappola Honeypot invisibile Anti-Bot */}
+                <div
+                  className="opacity-0 absolute -z-50 pointer-events-none h-0 w-0 overflow-hidden"
+                  aria-hidden="true"
+                >
+                  <label htmlFor="company_hp_check">Lascia questo campo vuoto</label>
+                  <input
+                    id="company_hp_check"
+                    type="text"
+                    name="hp_website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+
                 {/* Dati Opzionali (Nome, Telefono, Indirizzo, Note) */}
                 <div>
                   <button
@@ -437,11 +507,11 @@ export function CartDrawer() {
                 </div>
               </div>
 
-              {/* Informative Pill */}
-              <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 text-[11px] leading-relaxed border border-emerald-500/20">
-                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+              {/* Informative Security Pill */}
+              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-stone-100/80 text-stone-700 dark:bg-stone-900/80 dark:text-stone-300 text-[11px] leading-relaxed border border-stone-200 dark:border-stone-800">
+                <ShieldCheck className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" />
                 <span>
-                  Cliccando su Procedi si aprirà WhatsApp con la lista degli articoli formattata per completare l'ordine con il nostro staff.
+                  <b>Checkout Protetto:</b> Verrà generato un codice ordine univoco verificato e si aprirà WhatsApp con il nostro Concierge.
                 </span>
               </div>
 

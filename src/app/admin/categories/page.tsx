@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Plus, Pencil, Trash2, Layers, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Category } from '@/types/database.types';
-import { slugify } from '@/lib/utils';
+import { generateCategorySlug } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -63,7 +63,7 @@ export default function AdminCategoriesPage() {
   const handleNameChange = (val: string) => {
     setName(val);
     if (!editingCategory) {
-      setSlug(slugify(val));
+      setSlug(generateCategorySlug(val));
     }
   };
 
@@ -72,10 +72,13 @@ export default function AdminCategoriesPage() {
     setSaving(true);
     setErrorMsg(null);
 
+    // Lo slug viene generato automaticamente dal nome della categoria se nuovo
+    const finalSlug = editingCategory ? (slug || generateCategorySlug(name)) : generateCategorySlug(name);
+
     // Validazione preventiva schema categoria
     const validation = validateCategoryInput({
       name,
-      slug,
+      slug: finalSlug,
       description,
       image_url: imageUrl,
     });
@@ -239,19 +242,28 @@ export default function AdminCategoriesPage() {
 
           <Input
             label="Nome Categoria"
-            placeholder="es. Gioielli & Accessori"
+            placeholder="es. Gioielli & Bijoux"
             required
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
           />
 
-          <Input
-            label="Slug URL"
-            placeholder="es. gioielli-accessori"
-            required
-            value={slug}
-            onChange={(e) => setSlug(slugify(e.target.value))}
-          />
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/70 p-3 text-xs dark:border-stone-800 dark:bg-stone-900/60">
+            <div className="flex items-center justify-between text-stone-500 mb-1">
+              <span className="font-semibold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                Slug URL (Generato Automaticamente)
+              </span>
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full font-medium">
+                dal nome
+              </span>
+            </div>
+            <p className="font-mono text-xs text-stone-800 dark:text-stone-200">
+              /catalog?category=
+              <span className="font-bold text-stone-950 dark:text-stone-50">
+                {editingCategory ? (slug || generateCategorySlug(name)) : (generateCategorySlug(name) || '...')}
+              </span>
+            </p>
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">

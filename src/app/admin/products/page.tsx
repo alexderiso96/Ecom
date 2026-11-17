@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Plus, Pencil, Trash2, ShoppingBag, Upload, AlertCircle, Check, Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database.types';
-import { formatCurrency, slugify } from '@/lib/utils';
+import { formatCurrency, slugify, generateProductSlug } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -23,6 +23,7 @@ export default function AdminProductsPage() {
   // Form states
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [productToken, setProductToken] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -55,8 +56,10 @@ export default function AdminProductsPage() {
 
   const openAddModal = () => {
     setEditingProduct(null);
+    const token = Math.random().toString(36).substring(2, 7);
+    setProductToken(token);
     setName('');
-    setSlug('');
+    setSlug(generateProductSlug('', token));
     setCategoryId(categories[0]?.id || '');
     setDescription('');
     setPrice('');
@@ -70,6 +73,7 @@ export default function AdminProductsPage() {
 
   const openEditModal = (p: Product) => {
     setEditingProduct(p);
+    setProductToken('');
     setName(p.name);
     setSlug(p.slug);
     setCategoryId(p.category_id || '');
@@ -86,7 +90,7 @@ export default function AdminProductsPage() {
   const handleNameChange = (val: string) => {
     setName(val);
     if (!editingProduct) {
-      setSlug(slugify(val));
+      setSlug(generateProductSlug(val, productToken));
     }
   };
 
@@ -140,10 +144,15 @@ export default function AdminProductsPage() {
     setSaving(true);
     setErrorMsg(null);
 
+    // Lo slug del prodotto viene generato automaticamente in modo univoco
+    const finalSlug = editingProduct
+      ? (editingProduct.slug || slug || generateProductSlug(name))
+      : (slug || generateProductSlug(name, productToken));
+
     // 2. Validazione rigorosa degli input tramite schema di validazione
     const validation = validateProductInput({
       name,
-      slug,
+      slug: finalSlug,
       category_id: categoryId,
       description,
       price,
@@ -361,22 +370,33 @@ export default function AdminProductsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2.5">
             <Input
               label="Nome Prodotto"
-              placeholder="es. Sneakers Limited Edition"
+              placeholder="es. Collana Solitaire in Oro 18k"
               required
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
             />
 
-            <Input
-              label="Slug Univoco"
-              placeholder="es. sneakers-limited-edition"
-              required
-              value={slug}
-              onChange={(e) => setSlug(slugify(e.target.value))}
-            />
+            <div className="rounded-xl border border-stone-200/80 bg-stone-50/70 p-3 text-xs dark:border-stone-800 dark:bg-stone-900/60">
+              <div className="flex items-center justify-between text-stone-500 mb-1">
+                <span className="font-semibold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                  Slug URL Prodotto (Generato Automaticamente)
+                </span>
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full font-medium">
+                  {editingProduct ? 'slug esistente' : 'valore univoco random'}
+                </span>
+              </div>
+              <p className="font-mono text-xs text-stone-800 dark:text-stone-200">
+                /product/
+                <span className="font-bold text-stone-950 dark:text-stone-50">
+                  {editingProduct
+                    ? editingProduct.slug
+                    : (slug || generateProductSlug(name, productToken))}
+                </span>
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

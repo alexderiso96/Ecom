@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { CartItem } from '@/types/database.types';
+import {
+  getClientIp,
+  checkOrderRateLimit,
+  verifyBotProtection,
+} from '@/lib/rate-limiter';
 
 interface CreateOrderPayload {
   items: CartItem[];
@@ -10,12 +15,46 @@ interface CreateOrderPayload {
   customerPhone?: string;
   shippingAddress?: string;
   customerNotes?: string;
+  hp_website?: string;
+  clientTimestamp?: number;
 }
 
 export async function POST(request: Request) {
   try {
     const body: CreateOrderPayload = await request.json();
 
+    // 1. Verifica Anti-Bot (Honeypot + Tempo umano minimo di interazione)
+    const botCheck = verifyBotProtection({
+      honeypotValue: body.hp_website,
+      clientTimestamp: body.clientTimestamp,
+    });
+
+    if (!botCheck.isHuman) {
+      console.warn('[SECURITY BLOCKED] Richiesta bot intercettata:', botCheck.reason);
+      return NextResponse.json(
+        { error: 'Richiesta non autorizzata dai filtri di sicurezza.' },
+        { status: 403 }
+      );
+    }
+
+    // 2. Controllo Rate Limit rigoroso per IP ed Email (Max 4 ordini per IP / 3 per Email in 10m)
+    const clientIp = getClientIp(request);
+    const rateLimit = checkOrderRateLimit(clientIp, body.customerEmail);
+
+    if (!rateLimit.allowed) {
+      console.warn(`[RATE LIMIT EXCEEDED] IP: ${clientIp}, Email: ${body.customerEmail}`);
+      return NextResponse.json(
+        {
+          error:
+            rateLimit.reason ||
+            'Hai effettuato troppe richieste di ordine in poco tempo. Riprova tra qualche minuto.',
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    // 3. Validazione carrello
     if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json(
         { error: 'Il carrello è vuoto. Impossibile creare l\'ordine.' },
@@ -48,11 +87,11 @@ export async function POST(request: Request) {
       user?.user_metadata?.full_name ||
       (customerEmail ? customerEmail.split('@')[0] : 'Cliente');
 
-    // Genera codice identificativo univoco (es. AURA-894213)
+    // Genera codice identificativo univoco protetto (es. AURA-8942)
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `AURA-${Date.now().toString().slice(-4)}${randomSuffix}`;
 
-    // 1. Inserisci testata ordine
+    // 4. Inserisci testata ordine
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -77,7 +116,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Inserisci elementi ordine (order_items)
+    // 5. Inserisci elementi ordine (order_items)
     const orderItemsPayload = body.items.map((item) => ({
       order_id: order.id,
       product_id: item.productId && item.productId.length === 36 ? item.productId : null,

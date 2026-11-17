@@ -20,11 +20,26 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/types/database.types';
 
+interface BoutiqueNavItem {
+  label: string;
+  href: string;
+  categorySlug?: string | null;
+}
+
+// Categorie merceologiche reali (Donna e Uomo sono gestiti separatamente come Reparti)
+const boutiqueCategories: BoutiqueNavItem[] = [
+  { label: 'Gioielli', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
+  { label: 'Borse', href: '/catalog?category=borse', categorySlug: 'borse' },
+  { label: 'Accessori', href: '/catalog?category=accessori', categorySlug: 'accessori' },
+  { label: 'Tutto il Catalogo', href: '/catalog', categorySlug: null },
+];
+
 function NavbarInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
+  const currentDepartment = searchParams.get('department');
 
   const { openCart, getTotalItems } = useCartStore();
   const [mounted, setMounted] = useState(false);
@@ -115,20 +130,6 @@ function NavbarInner() {
     window.location.href = '/';
   };
 
-interface BoutiqueNavItem {
-  label: string;
-  href: string;
-  categorySlug?: string | null;
-}
-
-const boutiqueCategories: BoutiqueNavItem[] = [
-  { label: 'Gioielli', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
-  { label: 'Borse', href: '/catalog?category=borse', categorySlug: 'borse' },
-  { label: 'Donna', href: '/catalog?category=donna', categorySlug: 'donna' },
-  { label: 'Uomo', href: '/catalog?category=uomo', categorySlug: 'uomo' },
-  { label: 'Tutti i Prodotti', href: '/catalog', categorySlug: null },
-];
-
   return (
     <>
       {/* 1. Top Ribbon - Minimalist Luxury */}
@@ -152,8 +153,8 @@ const boutiqueCategories: BoutiqueNavItem[] = [
       <header className="sticky top-0 z-40 w-full border-b border-stone-200/70 bg-[#FDFBF7]/90 backdrop-blur-xl dark:border-stone-800/70 dark:bg-[#100F0E]/90 transition-all">
         <div className="container relative flex h-20 items-center justify-between">
           
-          {/* LEFT: Category Navigation (Desktop) / Hamburger (Mobile) */}
-          <div className="flex items-center gap-6 flex-1">
+          {/* LEFT: Department Selector (Donna/Uomo) + Actual Product Categories */}
+          <div className="flex items-center gap-5 flex-1">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-1.5 -ml-1.5 text-stone-700 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white transition-colors"
@@ -162,12 +163,44 @@ const boutiqueCategories: BoutiqueNavItem[] = [
               {mobileMenuOpen ? <X className="h-5 w-5 stroke-[1.4]" /> : <Menu className="h-5 w-5 stroke-[1.4]" />}
             </button>
 
-            <nav className="hidden lg:flex items-center gap-6">
+            {/* Department (Donna / Uomo) separato dalle categorie */}
+            <div className="hidden lg:flex items-center gap-1 border-r border-stone-200 dark:border-stone-800 pr-4">
+              <Link
+                href="/catalog?department=donna"
+                className={`text-[11px] tracking-[0.2em] uppercase font-semibold py-1 transition-colors relative ${
+                  pathname === '/catalog' && currentDepartment === 'donna'
+                    ? 'text-stone-950 dark:text-white font-bold'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100'
+                }`}
+              >
+                <span>Donna</span>
+                {pathname === '/catalog' && currentDepartment === 'donna' && (
+                  <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
+                )}
+              </Link>
+              <span className="text-stone-300 dark:text-stone-700 text-[10px] mx-1">/</span>
+              <Link
+                href="/catalog?department=uomo"
+                className={`text-[11px] tracking-[0.2em] uppercase font-semibold py-1 transition-colors relative ${
+                  pathname === '/catalog' && currentDepartment === 'uomo'
+                    ? 'text-stone-950 dark:text-white font-bold'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100'
+                }`}
+              >
+                <span>Uomo</span>
+                {pathname === '/catalog' && currentDepartment === 'uomo' && (
+                  <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
+                )}
+              </Link>
+            </div>
+
+            {/* Categorie Prodotto Reali: Gioielli, Borse, Accessori, Tutto */}
+            <nav className="hidden lg:flex items-center gap-5">
               {boutiqueCategories.map((item) => {
                 const isActive =
                   item.categorySlug !== undefined
-                    ? pathname === '/catalog' && (currentCategory || null) === item.categorySlug
-                    : pathname === item.href;
+                    ? pathname === '/catalog' && !currentDepartment && (currentCategory || null) === item.categorySlug
+                    : pathname === item.href && !currentDepartment;
 
                 return (
                   <Link
@@ -382,30 +415,6 @@ const boutiqueCategories: BoutiqueNavItem[] = [
                   <X className="h-4 w-4" />
                 </button>
               </form>
-              <div className="flex items-center gap-4 mt-3 text-[10px] tracking-[0.16em] uppercase text-stone-400">
-                <span>Suggeriti:</span>
-                <Link
-                  href="/catalog?category=gioielli"
-                  onClick={() => setSearchOpen(false)}
-                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
-                >
-                  Anelli
-                </Link>
-                <Link
-                  href="/catalog?category=gioielli"
-                  onClick={() => setSearchOpen(false)}
-                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
-                >
-                  Collane
-                </Link>
-                <Link
-                  href="/catalog?category=borse"
-                  onClick={() => setSearchOpen(false)}
-                  className="hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
-                >
-                  Borse in Pelle
-                </Link>
-              </div>
             </div>
           </div>
         )}
@@ -413,28 +422,48 @@ const boutiqueCategories: BoutiqueNavItem[] = [
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-stone-200/80 bg-[#FDFBF7] dark:border-stone-800 dark:bg-[#100F0E] p-6 space-y-4 animate-fade-in shadow-xl">
-            <div className="space-y-3">
-              {boutiqueCategories.map((item) => {
-                const isActive =
-                  item.categorySlug !== undefined
-                    ? pathname === '/catalog' && (currentCategory || null) === item.categorySlug
-                    : pathname === item.href;
+            {/* Reparti Donna / Uomo */}
+            <div className="pb-3 border-b border-stone-200 dark:border-stone-800 flex items-center gap-3">
+              <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">Reparto:</span>
+              <Link
+                href="/catalog?department=donna"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-xs tracking-[0.16em] uppercase px-3 py-1 border transition-all ${
+                  currentDepartment === 'donna'
+                    ? 'border-[#C5A880] bg-[#C5A880] text-stone-950 font-semibold'
+                    : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
+                }`}
+              >
+                Donna
+              </Link>
+              <Link
+                href="/catalog?department=uomo"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-xs tracking-[0.16em] uppercase px-3 py-1 border transition-all ${
+                  currentDepartment === 'uomo'
+                    ? 'border-[#C5A880] bg-[#C5A880] text-stone-950 font-semibold'
+                    : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
+                }`}
+              >
+                Uomo
+              </Link>
+            </div>
 
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block text-sm font-serif tracking-[0.12em] uppercase py-1 transition-colors ${
-                      isActive
-                        ? 'text-[#C5A880] font-semibold'
-                        : 'text-stone-800 dark:text-stone-200 hover:text-[#C5A880]'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+            {/* Categorie */}
+            <div className="space-y-2 pt-1">
+              <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400 block mb-1">
+                Categorie:
+              </span>
+              {boutiqueCategories.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#C5A880] dark:text-stone-200 py-1 transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
 
             <div className="pt-4 border-t border-stone-200 dark:border-stone-800 space-y-3">

@@ -14,13 +14,35 @@ export function formatCurrency(amount: number): string {
 }
 
 export function slugify(text: string): string {
+  if (!text) return '';
   return text
     .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
+    .replace(/&/g, '-e-')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Genera automaticamente lo slug per una categoria estraendolo direttamente dal nome.
+ */
+export function generateCategorySlug(name: string): string {
+  const base = slugify(name);
+  return base || `categoria-${Math.random().toString(36).substring(2, 7)}`;
+}
+
+/**
+ * Genera automaticamente lo slug univoco per un prodotto, combinando una base
+ * descrittiva derivata dal nome con un suffisso alfanumerico casuale (es. 'anello-oro-7k8f2' o 'prod-8f2a1b').
+ */
+export function generateProductSlug(name?: string, customToken?: string): string {
+  const token = customToken || Math.random().toString(36).substring(2, 7);
+  const base = name ? slugify(name) : '';
+  return base ? `${base}-${token}` : `prod-${token}`;
 }
 
 export interface WhatsAppOrderData {
@@ -48,9 +70,10 @@ export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
     minute: '2-digit',
   });
 
-  let message = `🛒 *NUOVO ORDINE E-COMMERCE*\n`;
+  let message = `🏛️ *AURA ATELIER — NUOVO ORDINE*\n`;
   if (data.orderNumber) {
-    message += `🔖 *Rif. Ordine:* ${data.orderNumber}\n`;
+    message += `🛡️ *CODICE DI VERIFICA:* ${data.orderNumber}\n`;
+    message += `🔒 *Stato Portale:* Registrato nel gestionale boutique\n`;
   }
   message += `📅 Data: ${dateStr}\n\n`;
   message += `*DETTAGLI ARTICOLI:*\n`;

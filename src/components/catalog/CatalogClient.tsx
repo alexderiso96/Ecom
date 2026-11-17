@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { Product, Category } from '@/types/database.types';
 import { ProductFilters } from '@/components/products/ProductFilters';
 import { ProductGrid } from '@/components/products/ProductGrid';
@@ -19,56 +19,115 @@ export function CatalogClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategoryParam = searchParams.get('category');
+  const initialDepartmentParam = (searchParams.get('department') as 'donna' | 'uomo' | null) || null;
   const initialQueryParam = searchParams.get('q') || searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     initialCategoryParam || null
   );
+  const [selectedDepartment, setSelectedDepartment] = useState<'donna' | 'uomo' | null>(
+    initialDepartmentParam
+  );
   const [searchQuery, setSearchQuery] = useState(initialQueryParam);
   const [sortBy, setSortBy] = useState('featured');
 
-  // Sincronizza lo stato quando l'utente naviga o cerca dall'header
+  // Sincronizza lo stato dai parametri URL
   useEffect(() => {
     const categoryFromUrl = searchParams.get('category');
+    const departmentFromUrl = (searchParams.get('department') as 'donna' | 'uomo' | null) || null;
     const queryFromUrl = searchParams.get('q') || searchParams.get('search') || '';
-    if (categoryFromUrl !== null) {
-      setSelectedCategory(categoryFromUrl);
-    } else {
-      setSelectedCategory(null);
-    }
+
+    setSelectedCategory(categoryFromUrl || null);
+    setSelectedDepartment(departmentFromUrl);
     if (queryFromUrl !== undefined) {
       setSearchQuery(queryFromUrl);
     }
   }, [searchParams]);
 
-  const handleCategorySelect = (categorySlug: string | null) => {
-    setSelectedCategory(categorySlug);
-    if (categorySlug) {
-      router.push(`/catalog?category=${encodeURIComponent(categorySlug)}`, { scroll: false });
-    } else {
-      router.push('/catalog', { scroll: false });
-    }
+  // Aggiorna l'URL preservando i filtri attivi
+  const updateUrl = (newCat: string | null, newDept: 'donna' | 'uomo' | null) => {
+    const params = new URLSearchParams();
+    if (newCat) params.set('category', newCat);
+    if (newDept) params.set('department', newDept);
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    const str = params.toString();
+    router.push(str ? `/catalog?${str}` : '/catalog', { scroll: false });
   };
 
-  // Filtro e ordinamento dinamico con matching semantico
+  const handleCategorySelect = (categorySlug: string | null) => {
+    setSelectedCategory(categorySlug);
+    updateUrl(categorySlug, selectedDepartment);
+  };
+
+  const handleDepartmentSelect = (dept: 'donna' | 'uomo' | null) => {
+    setSelectedDepartment(dept);
+    updateUrl(selectedCategory, dept);
+  };
+
+  // Filtro combinato per Reparto + Categoria + Ricerca + Ordinamento
   const filteredProducts = useMemo(() => {
     return initialProducts
       .filter((product) => {
-        // 1. Filtro Categoria Intelligente
+        const catSlug = product.category?.slug?.toLowerCase() || '';
+        const catName = product.category?.name?.toLowerCase() || '';
+        const prodName = product.name?.toLowerCase() || '';
+        const prodDesc = product.description?.toLowerCase() || '';
+
+        // 1. Filtro Reparto (Donna / Uomo)
+        if (selectedDepartment === 'uomo') {
+          const isMen =
+            catSlug.includes('uomo') ||
+            catName.includes('uomo') ||
+            catSlug.includes('masch') ||
+            prodName.includes('uomo') ||
+            prodDesc.includes('uomo') ||
+            prodDesc.includes('maschil') ||
+            prodName.includes('portafoglio') ||
+            prodName.includes('cintura') ||
+            prodName.includes('titanio') ||
+            prodName.includes('techwear') ||
+            prodName.includes('cargo') ||
+            prodName.includes('bifold');
+          if (!isMen) return false;
+        }
+
+        if (selectedDepartment === 'donna') {
+          // Escludi articoli esplicitamente maschili
+          const isMenExclusive =
+            prodName.includes('uomo') ||
+            prodName.includes('bifold') ||
+            (prodName.includes('portafoglio') && prodDesc.includes('uomo'));
+          if (isMenExclusive) return false;
+
+          const isWomen =
+            catSlug.includes('donna') ||
+            catName.includes('donna') ||
+            catSlug.includes('gioiell') ||
+            catSlug.includes('bors') ||
+            prodName.includes('donna') ||
+            prodName.includes('collana') ||
+            prodName.includes('anello') ||
+            prodName.includes('braccial') ||
+            prodName.includes('choker') ||
+            prodName.includes('borsa') ||
+            prodName.includes('tote') ||
+            prodName.includes('baguette') ||
+            prodName.includes('felpa');
+          if (!isWomen) return false;
+        }
+
+        // 2. Filtro Categoria Merceologica (Gioielli, Borse, Accessori, etc.)
         if (selectedCategory) {
           const target = selectedCategory.toLowerCase().trim();
-          const catSlug = product.category?.slug?.toLowerCase() || '';
-          const catName = product.category?.name?.toLowerCase() || '';
-          const prodName = product.name?.toLowerCase() || '';
-          const prodDesc = product.description?.toLowerCase() || '';
 
-          // Corrispondenza diretta esatta (slug o id)
-          if (catSlug === target || product.category_id === target) return true;
-
-          // Corrispondenza semantica "gioielli"
-          if (target === 'gioielli') {
-            if (catSlug.includes('gioiell') || catSlug.includes('orolog') || catName.includes('gioiell')) return true;
-            if (
+          // Corrispondenza diretta per slug o id
+          if (catSlug === target || product.category_id === target) {
+            // Continua
+          } else if (target === 'gioielli') {
+            const isJewelry =
+              catSlug.includes('gioiell') ||
+              catSlug.includes('orolog') ||
+              catName.includes('gioiell') ||
               prodName.includes('collana') ||
               prodName.includes('anello') ||
               prodName.includes('braccial') ||
@@ -76,72 +135,45 @@ export function CatalogClient({
               prodName.includes('orecchin') ||
               prodName.includes('gioiell') ||
               prodName.includes('oro') ||
-              prodName.includes('argento') ||
-              prodName.includes('titanio')
-            ) return true;
-          }
-
-          // Corrispondenza semantica "borse"
-          if (target === 'borse') {
-            if (catSlug.includes('bors') || catSlug.includes('pelletteria') || catName.includes('bors') || catName.includes('pelletteria')) return true;
-            if (
+              prodName.includes('argento');
+            if (!isJewelry) return false;
+          } else if (target === 'borse') {
+            const isBag =
+              catSlug.includes('bors') ||
+              catSlug.includes('pelletteria') ||
+              catName.includes('bors') ||
               prodName.includes('borsa') ||
               prodName.includes('zaino') ||
               prodName.includes('tote') ||
               prodName.includes('clutch') ||
               prodName.includes('tracolla') ||
+              prodName.includes('baguette') ||
               prodName.includes('bauletto') ||
-              prodName.includes('pelle') ||
-              prodDesc.includes('borsa') ||
-              prodDesc.includes('zaino')
-            ) return true;
-          }
-
-          // Corrispondenza semantica "donna"
-          if (target === 'donna') {
-            if (catSlug.includes('donna') || catName.includes('donna') || catSlug.includes('femm')) return true;
-            if (prodName.includes('donna') || prodDesc.includes('donna') || prodDesc.includes('femminil')) return true;
-            // Nella boutique, gioielli, borse, bijoux e capi femminili rientrano nel reparto Donna
-            if (
-              catSlug.includes('gioiell') ||
-              catSlug.includes('bors') ||
-              prodName.includes('collana') ||
-              prodName.includes('borsa') ||
-              prodName.includes('anello') ||
-              prodName.includes('choker') ||
-              prodName.includes('felpa') ||
-              prodName.includes('t-shirt')
-            ) return true;
-          }
-
-          // Corrispondenza semantica "uomo"
-          if (target === 'uomo') {
-            if (catSlug.includes('uomo') || catName.includes('uomo') || catSlug.includes('masch')) return true;
-            if (prodName.includes('uomo') || prodDesc.includes('uomo') || prodDesc.includes('maschil')) return true;
-            // Accessori maschili d'alta gamma: portafogli, cinture, orologi titanio, giacche e cargo
-            if (
+              prodDesc.includes('borsa');
+            if (!isBag) return false;
+          } else if (target === 'accessori') {
+            const isAccessory =
+              catSlug.includes('accessori') ||
+              catName.includes('accessori') ||
               prodName.includes('portafoglio') ||
               prodName.includes('cintura') ||
-              prodName.includes('titanio') ||
               prodName.includes('orologio') ||
-              prodName.includes('giacca') ||
-              prodName.includes('cargo') ||
-              prodName.includes('techwear')
-            ) return true;
+              prodName.includes('titanio') ||
+              prodName.includes('occhiali');
+            if (!isAccessory) return false;
+          } else if (catSlug.includes(target) || catName.includes(target)) {
+            // Match parziale
+          } else {
+            return false;
           }
-
-          // Corrispondenza parziale per qualsiasi altra categoria
-          if (catSlug.includes(target) || catName.includes(target)) return true;
-
-          return false;
         }
 
-        // 2. Filtro Ricerca
+        // 3. Filtro Ricerca
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
-          const matchName = product.name.toLowerCase().includes(q);
-          const matchDesc = product.description?.toLowerCase().includes(q) || false;
-          const matchCat = product.category?.name.toLowerCase().includes(q) || false;
+          const matchName = prodName.includes(q);
+          const matchDesc = prodDesc.includes(q);
+          const matchCat = catName.includes(q);
           if (!matchName && !matchDesc && !matchCat) return false;
         }
 
@@ -160,81 +192,119 @@ export function CatalogClient({
         // default 'featured'
         return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0);
       });
-  }, [initialProducts, selectedCategory, searchQuery, sortBy]);
+  }, [initialProducts, selectedCategory, selectedDepartment, searchQuery, sortBy]);
 
-  // Titolo della categoria attiva per l'header
-  const activeCategoryTitle = useMemo(() => {
+  // Titoli leggibili per l'header dinamico
+  const activeCategoryLabel = useMemo(() => {
     if (!selectedCategory) return null;
-    const cat = categories.find((c) => c.slug === selectedCategory);
-    if (cat) return cat.name;
-    const labels: Record<string, string> = {
+    const catMap: Record<string, string> = {
       gioielli: 'Gioielli & Bijoux',
       borse: 'Borse & Pelletteria',
-      donna: 'Collezione Donna',
-      uomo: 'Accessori Uomo',
+      accessori: 'Accessori di Stile',
     };
-    return labels[selectedCategory.toLowerCase()] || selectedCategory;
+    return catMap[selectedCategory.toLowerCase()] || categories.find((c) => c.slug === selectedCategory)?.name || selectedCategory;
   }, [selectedCategory, categories]);
+
+  const activeDepartmentLabel = useMemo(() => {
+    if (!selectedDepartment) return null;
+    return selectedDepartment === 'donna' ? 'Collezione Donna' : 'Accessori Uomo';
+  }, [selectedDepartment]);
 
   return (
     <div className="container py-12 md:py-16">
       {/* Header Editoriale */}
       <div className="mb-10 text-left border-b border-stone-200/80 dark:border-stone-800/80 pb-6">
         <span className="text-[10px] tracking-[0.24em] font-semibold text-[#C5A880] uppercase block mb-2">
-          ✦ Collezione Aura Atelier
+          ✦ Aura Atelier • Catalogo
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
-          {activeCategoryTitle || 'Il Catalogo Completo'}
+          {activeCategoryLabel && activeDepartmentLabel
+            ? `${activeCategoryLabel} — ${activeDepartmentLabel}`
+            : activeCategoryLabel || activeDepartmentLabel || 'Le Nostre Creazioni'}
         </h1>
         <p className="text-xs sm:text-sm font-light text-stone-500 dark:text-stone-400 mt-2 max-w-xl leading-relaxed">
-          {activeCategoryTitle
-            ? `Esplora la nostra selezione dedicata a ${activeCategoryTitle}. Ogni creazione è realizzata con materiali pregiati e include l'assistenza personale su WhatsApp.`
-            : "Esplora creazioni uniche tra gioielli scultorei, borse in morbida pelle e raffinati accessori di stile. Ogni acquisto include l'assistenza personale su WhatsApp."}
+          Pezzi esclusivi rifiniti con metalli nobili e pellami di pregio. Seleziona il reparto o la categoria per affinare la ricerca e ordina direttamente su WhatsApp con il nostro staff.
         </p>
       </div>
 
-      {/* Componente Filtri */}
+      {/* Componente Filtri Ridisegnato (Reparto + Card Visive Categorie) */}
       <ProductFilters
         categories={categories}
         selectedCategory={selectedCategory}
         onSelectCategory={handleCategorySelect}
+        selectedDepartment={selectedDepartment}
+        onSelectDepartment={handleDepartmentSelect}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
 
-      {/* Risultati Conteggio Discreto & Filtro Attivo */}
+      {/* Barra Informativa dei Filtri Attivi */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3 text-xs tracking-[0.14em] uppercase text-stone-500 dark:text-stone-400 font-medium">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span>
             {filteredProducts.length} {filteredProducts.length === 1 ? 'Creazione disponibile' : 'Creazioni disponibili'}
           </span>
-          {selectedCategory && (
+
+          {/* Badge Reparto Attivo */}
+          {selectedDepartment && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 text-[10px] tracking-normal font-sans font-medium">
-              <span>{activeCategoryTitle}</span>
+              <span>Reparto: <strong>{selectedDepartment === 'donna' ? 'Donna' : 'Uomo'}</strong></span>
               <button
                 type="button"
-                onClick={() => handleCategorySelect(null)}
+                onClick={() => handleDepartmentSelect(null)}
                 className="hover:text-stone-950 dark:hover:text-white"
-                title="Rimuovi filtro"
+                title="Rimuovi filtro reparto"
               >
                 <X className="h-3 w-3" />
               </button>
             </span>
           )}
+
+          {/* Badge Categoria Attiva */}
+          {selectedCategory && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 text-[10px] tracking-normal font-sans font-medium">
+              <span>Categoria: <strong>{activeCategoryLabel}</strong></span>
+              <button
+                type="button"
+                onClick={() => handleCategorySelect(null)}
+                className="hover:text-stone-950 dark:hover:text-white"
+                title="Rimuovi filtro categoria"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+
+          {/* Reset Totale se ci sono filtri attivi */}
+          {(selectedCategory || selectedDepartment || searchQuery) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory(null);
+                setSelectedDepartment(null);
+                setSearchQuery('');
+                router.push('/catalog', { scroll: false });
+              }}
+              className="text-[10px] font-sans font-medium text-[#C5A880] hover:underline ml-2"
+            >
+              Azzera tutti i filtri
+            </button>
+          )}
         </div>
 
         {searchQuery && (
           <span className="text-[11px] font-normal tracking-normal text-stone-400 font-sans">
-            Filtro ricerca: "{searchQuery}"
+            Ricerca: "{searchQuery}"
           </span>
         )}
       </div>
 
+      {/* Griglia Prodotti */}
       <ProductGrid
         products={filteredProducts}
-        emptyMessage="Nessun articolo corrisponde ai criteri selezionati. Modifica i filtri o la ricerca per esplorare le altre collezioni."
+        emptyMessage="Nessun articolo risponde ai criteri selezionati. Modifica il reparto o la categoria per visualizzare le altre collezioni."
       />
     </div>
   );
