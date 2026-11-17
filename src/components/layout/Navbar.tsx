@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingBag,
   User,
@@ -19,12 +19,14 @@ import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/types/database.types';
-import { formatCurrency } from '@/lib/utils';
 
-export function Navbar() {
+function NavbarInner() {
   const router = useRouter();
   const pathname = usePathname();
-  const { openCart, getTotalItems, getTotalPrice } = useCartStore();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
+
+  const { openCart, getTotalItems } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,7 +37,6 @@ export function Navbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
   const totalWishlistItems = useWishlistStore((state) => state.items.length);
   const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
@@ -114,14 +115,19 @@ export function Navbar() {
     window.location.href = '/';
   };
 
-  // Categorie richieste per l'identità del brand (Gioielli, Borse, Donna, Uomo)
-  const boutiqueCategories = [
-    { label: 'Gioielli', href: '/catalog?category=gioielli' },
-    { label: 'Borse', href: '/catalog?category=borse' },
-    { label: 'Donna', href: '/catalog?category=donna' },
-    { label: 'Uomo', href: '/catalog?category=uomo' },
-    { label: 'Tutti i Prodotti', href: '/catalog' },
-  ];
+interface BoutiqueNavItem {
+  label: string;
+  href: string;
+  categorySlug?: string | null;
+}
+
+const boutiqueCategories: BoutiqueNavItem[] = [
+  { label: 'Gioielli', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
+  { label: 'Borse', href: '/catalog?category=borse', categorySlug: 'borse' },
+  { label: 'Donna', href: '/catalog?category=donna', categorySlug: 'donna' },
+  { label: 'Uomo', href: '/catalog?category=uomo', categorySlug: 'uomo' },
+  { label: 'Tutti i Prodotti', href: '/catalog', categorySlug: null },
+];
 
   return (
     <>
@@ -158,7 +164,11 @@ export function Navbar() {
 
             <nav className="hidden lg:flex items-center gap-6">
               {boutiqueCategories.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive =
+                  item.categorySlug !== undefined
+                    ? pathname === '/catalog' && (currentCategory || null) === item.categorySlug
+                    : pathname === item.href;
+
                 return (
                   <Link
                     key={item.label}
@@ -171,7 +181,7 @@ export function Navbar() {
                   >
                     {item.label}
                     {isActive && (
-                      <span className="absolute bottom-0 left-0 w-full h-[1px] bg-[#C5A880]" />
+                      <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
                     )}
                   </Link>
                 );
@@ -404,16 +414,27 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-stone-200/80 bg-[#FDFBF7] dark:border-stone-800 dark:bg-[#100F0E] p-6 space-y-4 animate-fade-in shadow-xl">
             <div className="space-y-3">
-              {boutiqueCategories.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#C5A880] dark:text-stone-200 py-1 transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {boutiqueCategories.map((item) => {
+                const isActive =
+                  item.categorySlug !== undefined
+                    ? pathname === '/catalog' && (currentCategory || null) === item.categorySlug
+                    : pathname === item.href;
+
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block text-sm font-serif tracking-[0.12em] uppercase py-1 transition-colors ${
+                      isActive
+                        ? 'text-[#C5A880] font-semibold'
+                        : 'text-stone-800 dark:text-stone-200 hover:text-[#C5A880]'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="pt-4 border-t border-stone-200 dark:border-stone-800 space-y-3">
@@ -450,5 +471,13 @@ export function Navbar() {
         )}
       </header>
     </>
+  );
+}
+
+export function Navbar() {
+  return (
+    <Suspense fallback={<div className="h-20 bg-[#FDFBF7] dark:bg-[#100F0E] border-b border-stone-200/70" />}>
+      <NavbarInner />
+    </Suspense>
   );
 }
