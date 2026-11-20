@@ -29,6 +29,8 @@ export default function AdminProductsPage() {
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('10');
   const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [inputImageUrl, setInputImageUrl] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
@@ -65,6 +67,8 @@ export default function AdminProductsPage() {
     setPrice('');
     setStock('10');
     setImageUrl('');
+    setImages([]);
+    setInputImageUrl('');
     setIsFeatured(false);
     setIsActive(true);
     setErrorMsg(null);
@@ -81,6 +85,11 @@ export default function AdminProductsPage() {
     setPrice(String(p.price));
     setStock(String(p.stock));
     setImageUrl(p.image_url || '');
+    const productImages = Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : (p.image_url ? [p.image_url] : []);
+    setImages(productImages);
+    setInputImageUrl('');
     setIsFeatured(p.is_featured);
     setIsActive(p.is_active);
     setErrorMsg(null);
@@ -94,16 +103,20 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Upload su Supabase Storage bucket 'products-images' con validazione di sicurezza
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Upload su Supabase Storage bucket 'products-images' con supporto caricamento multiplo
+  const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-    // 1. Validazione preventiva sicurezza file (MIME type, estensione e dimensione max 5MB)
-    const fileValidation = validateImageFile(file);
-    if (!fileValidation.valid) {
-      setErrorMsg(fileValidation.error || 'File immagine non valido.');
-      return;
+    const files = Array.from(fileList);
+
+    // 1. Validazione di ciascun file
+    for (const file of files) {
+      const fileValidation = validateImageFile(file);
+      if (!fileValidation.valid) {
+        setErrorMsg(fileValidation.error || 'Uno o più file non sono validi.');
+        return;
+      }
     }
 
     setUploadingFile(true);
@@ -111,31 +124,83 @@ export default function AdminProductsPage() {
 
     try {
       const supabase = createClient();
-      const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      // Sanitizzazione nome file: solo timestamp numerico e token alfanumerico casuale (anti path-traversal)
-      const safeRandomToken = Math.random().toString(36).substring(2, 10);
-      const fileName = `${Date.now()}-${safeRandomToken}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+      const uploadedUrls: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from('products-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      for (const file of files) {
+        const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        // Sanitizzazione nome file: solo timestamp numerico e token alfanumerico casuale
+        const safeRandomToken = Math.random().toString(36).substring(2, 10);
+        const fileName = `${Date.now()}-${safeRandomToken}.${fileExt}`;
+        const filePath = `products/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('products-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
 
-      // Recupera URL pubblico
-      const { data: publicUrlData } = supabase.storage
-        .from('products-images')
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
 
-      setImageUrl(publicUrlData.publicUrl);
+        // Recupera URL pubblico
+        const { data: publicUrlData } = supabase.storage
+          .from('products-images')
+          .getPublicUrl(filePath);
+
+        if (publicUrlData?.publicUrl) {
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      }
+
+      setImages((prev) => {
+        const updated = [...prev, ...uploadedUrls];
+        if (!imageUrl && updated.length > 0) {
+          setImageUrl(updated[0]);
+        }
+        return updated;
+      });
+
+      if (!imageUrl && uploadedUrls.length > 0) {
+        setImageUrl(uploadedUrls[0]);
+      }
     } catch (err: any) {
       setErrorMsg(`Errore upload file su Supabase Storage: ${err.message}`);
     } finally {
       setUploadingFile(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    const trimmed = inputImageUrl.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('https://') && !trimmed.startsWith('/') && !trimmed.startsWith('http://localhost')) {
+      setErrorMsg('L\'URL dell\'immagine deve iniziare con https:// o percorso relativo.');
+      return;
+    }
+    if (images.includes(trimmed)) {
+      setErrorMsg('Questa immagine è già presente nella galleria del prodotto.');
+      return;
+    }
+    setErrorMsg(null);
+    setImages((prev) => {
+      const updated = [...prev, trimmed];
+      if (!imageUrl) setImageUrl(trimmed);
+      return updated;
+    });
+    if (!imageUrl) setImageUrl(trimmed);
+    setInputImageUrl('');
+  };
+
+  const handleSetCoverImage = (url: string) => {
+    setImageUrl(url);
+  };
+
+  const handleRemoveImage = (url: string) => {
+    const filtered = images.filter((img) => img !== url);
+    setImages(filtered);
+    if (imageUrl === url) {
+      setImageUrl(filtered[0] || '');
     }
   };
 
@@ -149,6 +214,10 @@ export default function AdminProductsPage() {
       ? (editingProduct.slug || slug || generateProductSlug(name))
       : (slug || generateProductSlug(name, productToken));
 
+    // Determina la galleria finale e l'immagine principale di copertina
+    const finalImages = images.length > 0 ? images : (imageUrl ? [imageUrl] : []);
+    const finalCover = imageUrl || (finalImages[0] || null);
+
     // 2. Validazione rigorosa degli input tramite schema di validazione
     const validation = validateProductInput({
       name,
@@ -157,7 +226,8 @@ export default function AdminProductsPage() {
       description,
       price,
       stock,
-      image_url: imageUrl,
+      image_url: finalCover,
+      images: finalImages,
       is_featured: isFeatured,
       is_active: isActive,
     });
@@ -294,8 +364,13 @@ export default function AdminProductsPage() {
                               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono">
-                            /{p.slug}
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
+                            <span>/{p.slug}</span>
+                            {Array.isArray(p.images) && p.images.length > 1 && (
+                              <span className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                                {p.images.length} foto
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -451,45 +526,124 @@ export default function AdminProductsPage() {
             />
           </div>
 
-          {/* Upload Immagine su Supabase Storage */}
-          <div className="space-y-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50">
-            <span className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Immagine Prodotto (Supabase Storage: bucket 'products-images')
-            </span>
+          {/* Galleria Foto Prodotto (Foto Multiple) */}
+          <div className="space-y-3 p-4 rounded-2xl border border-stone-200/90 bg-stone-50/60 dark:border-stone-800 dark:bg-stone-900/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div>
+                <span className="block text-xs font-bold text-stone-800 dark:text-stone-200">
+                  Galleria Fotografica ({images.length} {images.length === 1 ? 'foto' : 'foto'})
+                </span>
+                <p className="text-[11px] text-stone-500">
+                  Carica una o più foto (puoi selezionare più file insieme). La foto contrassegnata dalla stella è la copertina.
+                </p>
+              </div>
+              {images.length > 0 && (
+                <span className="text-[10px] uppercase font-bold tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-0.5 rounded-full border border-amber-200/60 self-start sm:self-auto">
+                  Copertina selezionata
+                </span>
+              )}
+            </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-sm text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
+            {/* Azioni di caricamento: File multipli da disco o URL esterno */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-stone-900 text-white hover:bg-stone-800 shadow-sm text-xs font-semibold cursor-pointer dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white transition-all flex-shrink-0">
                 <Upload className="h-4 w-4" />
-                {uploadingFile ? 'Caricamento Storage...' : 'Carica File Immagine'}
+                {uploadingFile ? 'Caricamento Storage...' : 'Carica Foto dal Dispositivo'}
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleFileUpload}
+                  multiple
+                  onChange={handleMultipleFileUpload}
                   className="hidden"
                   disabled={uploadingFile}
                 />
               </label>
 
-              <span className="text-xs text-slate-400">oppure inserisci URL:</span>
-
-              <input
-                type="text"
-                placeholder="https://..."
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="flex-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
+              <div className="flex-1 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="oppure incolla URL https://..."
+                  value={inputImageUrl}
+                  onChange={(e) => setInputImageUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddImageUrl();
+                    }
+                  }}
+                  className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 dark:border-stone-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  className="px-3.5 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-xs font-bold text-stone-700 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-200 transition-colors flex-shrink-0"
+                >
+                  Aggiungi
+                </button>
+              </div>
             </div>
 
-            {imageUrl && (
-              <div className="mt-2 flex items-center gap-3">
-                <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
-                  <Image src={imageUrl} alt="Anteprima" fill className="object-cover" />
-                </div>
-                <span className="text-[11px] text-emerald-600 font-medium truncate max-w-xs">
-                  Immagine impostata correttamente
-                </span>
+            {/* Griglia Miniature delle Foto */}
+            {images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {images.map((imgUrl, idx) => {
+                  const isCover = imgUrl === imageUrl;
+                  return (
+                    <div
+                      key={`${imgUrl}-${idx}`}
+                      className={`relative aspect-[4/5] rounded-xl overflow-hidden border group bg-stone-100 shadow-2xs transition-all ${
+                        isCover
+                          ? 'border-[#C5A880] ring-2 ring-[#C5A880]/40'
+                          : 'border-stone-200 dark:border-stone-800 hover:border-stone-400'
+                      }`}
+                    >
+                      <Image
+                        src={imgUrl}
+                        alt={`Foto ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, 25vw"
+                      />
+
+                      {/* Badge Copertina */}
+                      {isCover && (
+                        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900/90 text-white text-[9px] font-bold tracking-wider uppercase backdrop-blur-xs shadow-sm z-10">
+                          <Star className="h-2.5 w-2.5 fill-[#C5A880] text-[#C5A880]" />
+                          <span>Copertina</span>
+                        </div>
+                      )}
+
+                      {/* Azioni Hover */}
+                      <div className="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(imgUrl)}
+                            className="p-1.5 rounded-full bg-white/90 text-rose-600 hover:bg-rose-50 hover:text-rose-700 shadow-sm transition-colors"
+                            title="Rimuovi questa foto"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        {!isCover && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetCoverImage(imgUrl)}
+                            className="w-full py-1.5 px-2 rounded-lg bg-white/95 text-stone-900 text-[10px] font-bold tracking-wider uppercase hover:bg-white shadow-sm transition-all text-center"
+                          >
+                            Imposta Copertina
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            ) : (
+              <p className="text-center py-4 text-xs text-stone-400 border border-dashed border-stone-200 rounded-xl dark:border-stone-800">
+                Nessuna foto ancora aggiunta. Carica uno o più file dal tuo computer o incolla un link.
+              </p>
             )}
           </div>
 

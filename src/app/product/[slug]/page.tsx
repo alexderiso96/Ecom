@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Product } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
 import { ProductDetailActions } from '@/components/products/ProductDetailActions';
+import { ProductGallery } from '@/components/products/ProductGallery';
 
 interface ProductPageProps {
   params: {
@@ -59,36 +60,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-        {/* Left: Gallery Image Frame */}
-        <div className="lg:col-span-6 relative aspect-[4/5] w-full overflow-hidden bg-[#F5F2EB] dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 shadow-luxury">
-          {product.image_url ? (
-            <Image
-              src={product.image_url}
-              alt={product.name}
-              fill
-              priority
-              className="object-cover object-center filter saturate-[0.98]"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-stone-300 dark:text-stone-700">
-              <ShoppingBag className="h-20 w-20 stroke-[1]" />
-            </div>
-          )}
-
-          {/* Badges overlay */}
-          <div className="absolute top-4 left-4 flex flex-col items-start gap-1.5 z-10">
-            {product.is_featured && (
-              <span className="px-2.5 py-1 text-[9px] font-semibold tracking-[0.2em] uppercase bg-stone-900 text-white dark:bg-white dark:text-stone-950">
-                In Evidenza
-              </span>
-            )}
-            {product.category?.name && (
-              <span className="px-2.5 py-1 text-[9px] font-medium tracking-[0.16em] uppercase bg-white/90 text-stone-800 backdrop-blur-sm border border-stone-200/60 dark:bg-stone-900/90 dark:text-stone-200 dark:border-stone-700">
-                {product.category.name}
-              </span>
-            )}
-          </div>
+        {/* Left: Interactive Multi-Image Gallery */}
+        <div className="lg:col-span-6 w-full">
+          <ProductGallery product={product} />
         </div>
 
         {/* Right: Product Editorial Information */}

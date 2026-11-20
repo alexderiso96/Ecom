@@ -17,6 +17,7 @@ export interface ValidatedProductInput {
   price: number;
   stock: number;
   image_url: string | null;
+  images: string[];
   is_featured: boolean;
   is_active: boolean;
 }
@@ -48,6 +49,7 @@ export function validateProductInput(input: {
   price: string | number;
   stock: string | number;
   image_url?: string | null;
+  images?: string[] | null;
   is_featured?: boolean;
   is_active?: boolean;
 }): ValidationResult<ValidatedProductInput> {
@@ -109,6 +111,22 @@ export function validateProductInput(input: {
     };
   }
 
+  // Validazione e sanitizzazione della galleria immagini
+  const rawImages: string[] = Array.isArray(input.images)
+    ? input.images
+    : (input.image_url ? [input.image_url] : []);
+
+  const sanitizedImages = rawImages
+    .map((img) => (img || '').trim())
+    .filter((img) => {
+      if (!img || img.length > 2000) return false;
+      return (
+        img.startsWith('https://') ||
+        img.startsWith('/') ||
+        img.startsWith('http://localhost')
+      );
+    });
+
   let imageUrl = (input.image_url || '').trim();
   if (imageUrl) {
     if (imageUrl.length > 2000) {
@@ -128,6 +146,13 @@ export function validateProductInput(input: {
         error: 'L\'URL dell\'immagine deve utilizzare protocollo sicuro HTTPS.',
       };
     }
+  } else if (sanitizedImages.length > 0) {
+    imageUrl = sanitizedImages[0];
+  }
+
+  // Se l'immagine principale non è nell'array galleria, inseriscila come prima
+  if (imageUrl && !sanitizedImages.includes(imageUrl)) {
+    sanitizedImages.unshift(imageUrl);
   }
 
   return {
@@ -140,6 +165,7 @@ export function validateProductInput(input: {
       price: Math.round(numericPrice * 100) / 100, // Arrotonda a 2 decimali
       stock: numericStock,
       image_url: imageUrl || null,
+      images: sanitizedImages,
       is_featured: Boolean(input.is_featured),
       is_active: Boolean(input.is_active),
     },
