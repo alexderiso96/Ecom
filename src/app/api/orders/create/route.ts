@@ -74,8 +74,26 @@ export async function POST(request: Request) {
 
   try {
     const { data: { user } } = await createClient().auth.getUser();
+    const isSecretKey = serviceKey.startsWith('sb_secret_');
     const supabase = createServiceClient(url, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async (input, init) => {
+          const headers = new Headers(init?.headers);
+          // Opaque secret keys authenticate through apikey. Legacy keys are JWTs.
+          if (isSecretKey) headers.delete('Authorization');
+          const response = await fetch(input, { ...init, headers });
+          if (response.status === 401 || response.status === 403) {
+            console.error('Autenticazione Supabase checkout respinta', {
+              status: response.status,
+              gatewayCode: response.headers.get('sb-error-code'),
+              requestId: response.headers.get('sb-request-id'),
+              keyFormat: isSecretKey ? 'secret' : 'legacy-or-other',
+            });
+          }
+          return response;
+        },
+      },
     });
     const { data, error, status } = await supabase.rpc('create_checkout', {
       p_key: payload.key, p_user: user?.id ?? null,

@@ -116,7 +116,7 @@ Avvia il sito con `npm run dev`.
 
 ### Checkout
 
-Il server verifica quantità, disponibilità e prezzi e salva l’ordine con le righe in una singola transazione. Il riepilogo mostra il codice, il totale degli articoli e i comandi per aprire WhatsApp o copiare il messaggio. Gli ordini in attesa di risposta non riservano stock, così il negozio può confermare disponibilità e spedizione in chat.
+Il server verifica quantità, disponibilità e prezzi e salva l’ordine con le righe in una singola transazione. WhatsApp si apre automaticamente dopo la registrazione. Il riepilogo mostra il codice, il totale degli articoli e i comandi per riaprire WhatsApp o copiare il messaggio. Gli ordini in attesa di risposta non riservano stock, così il negozio può confermare disponibilità e spedizione in chat.
 
 ### Verifiche
 

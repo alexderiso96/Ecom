@@ -97,6 +97,7 @@ export function CartDrawer() {
 
   const totalPrice = getTotalPrice();
   const totalItems = getTotalItems();
+  const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
   const handleWhatsAppCheckout = async () => {
     if (!items.length || submitting.current) return;
@@ -119,6 +120,21 @@ export function CartDrawer() {
     submitting.current = true;
     setEmailError('');
     setIsSubmittingOrder(true);
+
+    // Reserve a tab during the click, while the browser still allows popups.
+    let whatsappTab: Window | null = null;
+    try {
+      whatsappTab = window.open('about:blank', '_blank');
+      if (whatsappTab) {
+        whatsappTab.opener = null;
+        whatsappTab.document.title = 'Dream Creation';
+        whatsappTab.document.body.textContent = 'Registrazione ordine in corso…';
+      }
+    } catch {
+      whatsappTab?.close();
+      whatsappTab = null;
+    }
+
     try {
       const encoded = new TextEncoder().encode(JSON.stringify({ customer, orderItems }));
       const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', encoded))).join(',');
@@ -147,26 +163,30 @@ export function CartDrawer() {
         throw new Error(data.error || 'Registrazione ordine non riuscita.');
       }
 
-      setReceipt({
-        code: data.orderNumber,
-        total: data.totalPrice,
-        message: buildWhatsAppOrderMessage({ ...customer, ...data, orderNumber: data.orderNumber }),
-      });
+      const message = buildWhatsAppOrderMessage({ ...customer, ...data, orderNumber: data.orderNumber });
+      setReceipt({ code: data.orderNumber, total: data.totalPrice, message });
       setCopyStatus('');
       lastAttempt.current = undefined;
       try {
         sessionStorage.removeItem('dream_checkout_attempt');
       } catch {}
       if (useCartStore.getState().items === items) clearCart();
+
+      try {
+        if (whatsappTab && !whatsappTab.closed) {
+          whatsappTab.location.replace(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`);
+        }
+      } catch {
+        whatsappTab?.close();
+      }
     } catch (error) {
+      whatsappTab?.close();
       setEmailError(error instanceof Error ? error.message : 'Connessione interrotta. Riprova.');
     } finally {
       submitting.current = false;
       setIsSubmittingOrder(false);
     }
   };
-
-  const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -227,7 +247,7 @@ export function CartDrawer() {
                       Ordine registrato
                     </h3>
                     <p className="text-xs text-stone-500 max-w-xs mt-2 mx-auto leading-relaxed">
-                      Controlla il totale degli articoli e invia il riepilogo a Dream Creation su WhatsApp.
+                      Invia il riepilogo nella chat di WhatsApp. Se la chat non si apre, usa il pulsante qui sotto.
                     </p>
                   </div>
 
@@ -496,7 +516,7 @@ export function CartDrawer() {
               <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-stone-100/80 text-stone-700 dark:bg-stone-900/80 dark:text-stone-300 text-[11px] leading-relaxed border border-stone-200 dark:border-stone-800">
                 <ShieldCheck className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" />
                 <span>
-                  <b>Checkout Protetto:</b> Dopo la registrazione potrai inviare il riepilogo via WhatsApp.
+                  <b>Checkout Protetto:</b> Dopo la registrazione si aprirà WhatsApp con il riepilogo pronto da inviare.
                 </span>
               </div>
 
@@ -514,7 +534,7 @@ export function CartDrawer() {
                 ) : (
                   <>
                     <MessageCircle className="h-4 w-4 stroke-[2.2]" />
-                    <span>Registra ordine</span>
+                    <span>Registra ordine e apri WhatsApp</span>
                   </>
                 )}
               </button>
