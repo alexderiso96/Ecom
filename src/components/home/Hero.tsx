@@ -7,42 +7,36 @@ export function Hero() {
   const message = encodeURIComponent('Ciao! Vorrei informazioni su una personalizzazione.');
 
   return (
-    <section className="border-b border-[#dbcdbd] bg-[#f1e8dc] dark:border-stone-800 dark:bg-[#211a17]">
-      <div className="container grid gap-9 py-10 md:grid-cols-2 md:items-center md:gap-14 md:py-16">
-        <div className="max-w-xl space-y-6">
-          <Image
-            src="/dream-creation/logo.png"
-            alt="Dream Creation"
-            width={86}
-            height={86}
-            priority
-            className="rounded-full"
-          />
-          <h1 className="font-serif text-5xl leading-[1.04] tracking-tight text-[#251c19] dark:text-[#f7eee3] sm:text-6xl xl:text-7xl">
-            Personalizza ciò che <em className="font-normal text-[#795724] dark:text-[#d7b47d]">ami.</em>
+    <section className="border-b border-[#e2d4c4] bg-[#f8f1e8] dark:border-stone-800 dark:bg-[#211a17]">
+      <div className="container grid items-center gap-9 py-10 sm:gap-12 sm:py-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-16">
+        <div className="max-w-xl lg:py-8">
+          <div aria-hidden="true" className="mb-6 h-px w-12 bg-[#9c784b] dark:bg-[#d7b47d]" />
+          <h1 className="font-serif text-[clamp(3rem,8vw,5.25rem)] leading-[0.97] tracking-[-0.055em] text-[#251c19] dark:text-[#f7eee3] lg:text-[clamp(3.5rem,6.1vw,5.25rem)]">
+            Personalizza
+            <span className="block">ciò che <em className="font-normal text-[#795724] dark:text-[#d7b47d]">ami.</em></span>
           </h1>
-          <p className="max-w-sm text-base leading-relaxed text-stone-700 dark:text-stone-300">
-            Ombrelli ricamati, bijoux, tazze e idee regalo. Scrivici per scegliere la personalizzazione e conoscere costi e spedizione.
+          <p className="mt-6 max-w-[36ch] text-base leading-relaxed text-stone-700 dark:text-stone-300 sm:text-lg">
+            Ricami, bijoux e idee regalo da rendere tuoi con un’iniziale, un nome o un dettaglio speciale.
           </p>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Link href="/catalog" className="inline-flex items-center gap-2 rounded-full bg-[#251c19] px-5 py-3 text-sm font-semibold text-white hover:bg-[#46332a] dark:bg-[#f1e8dc] dark:text-[#251c19] dark:hover:bg-white">
-              Sfoglia il catalogo <ArrowUpRight className="h-4 w-4" />
+          <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <Link href="/catalog" className="inline-flex min-h-12 items-center gap-3 rounded-full bg-[#251c19] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#46332a] dark:bg-[#f1e8dc] dark:text-[#251c19] dark:hover:bg-white">
+              Esplora il catalogo <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </Link>
-            <a href={`https://wa.me/${phone}?text=${message}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[#a98b65] px-5 py-3 text-sm font-semibold hover:bg-[#e9dccc] dark:hover:bg-stone-800">
-              <MessageCircle className="h-4 w-4" /> Scrivici su WhatsApp
+            <a href={`https://wa.me/${phone}?text=${message}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#65461f] underline decoration-[#ad916e] underline-offset-4 transition-colors hover:text-[#251c19] dark:text-[#e8c897] dark:hover:text-white">
+              <MessageCircle aria-hidden="true" className="h-4 w-4" /> Personalizza su WhatsApp
             </a>
           </div>
         </div>
-        <div className="grid aspect-[5/4] grid-cols-[1.2fr_1fr] grid-rows-2 gap-2 overflow-hidden rounded-2xl">
-          <div className="relative row-span-2">
-            <Image src="/dream-creation/ricami.jpg" alt="Pochette nere con iniziali ricamate in oro" fill priority sizes="(max-width: 767px) 52vw, 28vw" className="object-cover" />
-          </div>
-          <div className="relative">
-            <Image src="/dream-creation/ombrelli.jpg" alt="Ombrelli personalizzati con iniziali ricamate" fill sizes="(max-width: 767px) 44vw, 24vw" className="object-cover object-[center_30%]" />
-          </div>
-          <div className="relative">
-            <Image src="/dream-creation/bijoux.jpg" alt="Orecchini ovali colorati" fill sizes="(max-width: 767px) 44vw, 24vw" className="object-cover object-top" />
-          </div>
+        <div className="relative aspect-[5/4] overflow-hidden rounded-[1.5rem] rounded-tr-[4rem] bg-[#e9dccc] shadow-[0_20px_55px_-34px_rgba(66,42,25,0.55)] sm:rounded-tr-[6rem]">
+          <Image
+            src="/dream-creation/hero-ricamo.jpg"
+            alt="Una mano ricama un motivo botanico con filo dorato su un telaio di legno"
+            fill
+            priority
+            sizes="(max-width: 1023px) 100vw, 54vw"
+            className="object-cover"
+          />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-2.5 rounded-[1rem] rounded-tr-[3.35rem] border border-white/45 sm:rounded-tr-[5.35rem]" />
         </div>
       </div>
     </section>
