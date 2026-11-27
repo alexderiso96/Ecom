@@ -1,10 +1,8 @@
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ShoppingBag, Truck, ShieldCheck, RefreshCw, Flame, Sparkles } from 'lucide-react';
+import { ChevronLeft, Truck, Flame } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { Product } from '@/types/database.types';
 import { formatCurrency } from '@/lib/utils';
 import { ProductDetailActions } from '@/components/products/ProductDetailActions';
 import { ProductGallery } from '@/components/products/ProductGallery';
@@ -69,11 +67,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <div className="lg:col-span-6 space-y-6 text-left">
           <div>
             <div className="flex items-center justify-between gap-4 mb-2">
-              <span className="text-[10px] tracking-[0.24em] uppercase font-semibold text-[#B8915D]">
+              <span className="text-[10px] tracking-[0.24em] uppercase font-semibold text-[#795724] dark:text-[#D7B47D]">
                 {product.category?.name || 'Dream Creation'}
               </span>
 
-              {isOutOfStock ? (
+              {product.quote_required ? null : isOutOfStock ? (
                 <span className="text-[10px] tracking-widest uppercase font-semibold text-stone-400">
                   Esaurito
                 </span>
@@ -95,11 +93,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <div className="mt-4 flex items-baseline gap-3">
               <span className="text-2xl sm:text-3xl font-light tracking-tight text-stone-900 dark:text-stone-100">
-                {formatCurrency(Number(product.price))}
+                {product.quote_required ? 'Su preventivo' : formatCurrency(Number(product.price))}
               </span>
-              <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400 font-medium">
-                IVA Inclusa
-              </span>
+              {!product.quote_required && (
+                <span className="text-[10px] tracking-[0.2em] uppercase text-stone-600 dark:text-stone-300 font-medium">
+                  IVA inclusa
+                </span>
+              )}
             </div>
           </div>
 
@@ -113,24 +113,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </p>
           </div>
 
+          {product.personalization && (
+            <section className="space-y-2">
+              <h2 className="font-semibold">Personalizzazione</h2>
+              <p className="whitespace-pre-line text-sm text-stone-700 dark:text-stone-300">{product.personalization}</p>
+            </section>
+          )}
+
           {/* Actions (Quantity, Wishlist, WhatsApp & Cart) */}
           <ProductDetailActions product={product} />
 
-          {/* Value Propositions */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-stone-200/80 dark:border-stone-800/80 text-[10px] tracking-[0.12em] uppercase text-stone-500">
-            <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
-              <span>Consegna 24/48h</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
-              <span>Garanzia Autenticità</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
-              <span>Reso entro 14gg</span>
-            </div>
-          </div>
+          <p className="flex items-center gap-2 border-t border-stone-200/80 pt-4 text-sm text-stone-600 dark:border-stone-800 dark:text-stone-300">
+            <Truck className="h-4 w-4 shrink-0" />
+            Tempi e costi di spedizione da concordare su WhatsApp.
+          </p>
         </div>
       </div>
     </div>

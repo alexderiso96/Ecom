@@ -1,8 +1,8 @@
-# 🛍️ Aura Store - E-Commerce Next.js & Supabase con Checkout WhatsApp
+# Dream Creation
 
 Un'applicazione e-commerce moderna, scalabile e performante sviluppata con **Next.js (App Router)**, **Tailwind CSS**, **Zustand** e **Supabase** (Database PostgreSQL, Row Level Security, Auth e Storage). 
 
-Nessun gateway di pagamento tradizionale: gli ordini vengono convertiti istantaneamente in un messaggio formattato e instradati tramite le API ufficiali di WhatsApp per una vendita diretta, umana e a zero commissioni di transazione.
+Nessun gateway di pagamento tradizionale: gli ordini vengono convertiti istantaneamente in un messaggio formattato e inviati dal cliente tramite un link a WhatsApp per una vendita diretta, umana e a zero commissioni di transazione.
 
 ---
 
@@ -81,87 +81,42 @@ L'applicazione implementa un sistema Role-Based Access Control su tabella `publi
 
 ---
 
-## ⚡ Installazione e Configurazione Rapida
+## Installazione e configurazione
 
-### 1. Configurazione Supabase
-1. Accedi alla dashboard di [Supabase](https://supabase.com) e crea un nuovo progetto.
-2. Vai nella sezione **SQL Editor** del tuo progetto.
-3. Copia l'intero contenuto del file [`supabase/schema.sql`](supabase/schema.sql) ed eseguilo. Lo script configurerà automaticamente:
-   - Tabelle `profiles`, `categories`, `products`
-   - Trigger di auto-creazione profilo su registrazione (`auth.users`)
-   - Funzioni `is_admin()` e `is_superadmin()` `SECURITY DEFINER`
-   - Tutte le policy RLS per isolare l'accesso ai dati
-   - Il bucket storage pubblico `products-images`
-   - Alcuni dati di esempio (categorie e prodotti con immagini Unsplash)
+Usa Node.js 22 e installa le dipendenze con `npm ci`.
 
-### 2. Promuovere il primo utente a SuperAdmin
-Dopo esserti registrato tramite l'app alla pagina `/auth/register`:
-Nel SQL Editor di Supabase esegui:
+### Supabase
+
+Su un progetto nuovo esegui questi file in ordine dal SQL Editor:
+
+1. [schema.sql](supabase/schema.sql)
+2. [orders_migration.sql](supabase/orders_migration.sql)
+3. [add_multiple_images.sql](supabase/add_multiple_images.sql)
+4. [security_hardening.sql](supabase/security_hardening.sql)
+5. [dream_creation_checkout.sql](supabase/dream_creation_checkout.sql)
+
+Su un progetto esistente con schema, ordini, galleria e hardening già applicati, aggiungi unicamente `dream_creation_checkout.sql`. La migrazione rimuove la scrittura diretta degli ordini per gli utenti pubblici. Coordinane l’applicazione con l’aggiornamento dell’app affinché il nuovo endpoint usi la funzione SQL abilitata per il server.
+
+Per il primo SuperAdmin, registra l’identità tramite il sito e usa lo SQL Editor con il ruolo database `postgres`:
+
 ```sql
-UPDATE public.profiles 
-SET role = 'superadmin' 
-WHERE email = 'tua-email@esempio.com';
-```
-Da quel momento potrai accedere liberamente a `/admin` e `/superadmin` e gestire gli altri utenti direttamente dall'interfaccia web!
-
-### 3. Configurazione Variabili d'Ambiente
-Copia `.env.example` in `.env.local`:
-```bash
-cp .env.example .env.local
-```
-Compila i campi:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://tuo-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=la-tua-chiave-anon-pubblica
-NEXT_PUBLIC_WHATSAPP_NUMBER=393400000000
-```
-*(Il numero WhatsApp deve essere inserito in formato internazionale senza il prefisso `+`, es. `393401234567` per l'Italia).*
-
-### 4. Avvio in Sviluppo Locale
-```bash
-npm run dev
-```
-Apri [http://localhost:3000](http://localhost:3000) nel browser.
-
----
-
-## 📲 Come Funziona il Checkout WhatsApp
-
-Quando il cliente clicca su **"Procedi all'Ordine su WhatsApp"** nel carrello offcanvas, l'app genera istantaneamente una richiesta tramite l'URL standard `https://wa.me/<NUMERO>?text=...`:
-
-Esempio di messaggio autogenerato e formattato:
-```text
-🛒 *NUOVO ORDINE E-COMMERCE*
-📅 Data: 03/11/2026, 11:30
-
-*DETTAGLI ARTICOLI:*
-1. *Cuffie Wireless Hi-Fi Studio Pro*
-   Quantità: 1 x €249.99 = €249.99
-2. *Zaino Minimalista Urban Waterproof*
-   Quantità: 2 x €119.00 = €238.00
-
-💰 *TOTALE ORDINE: €487.99*
-
-*DATI CLIENTE:*
-👤 Nome: Mario Rossi
-✉️ Email: mario.rossi@example.com
-📞 Telefono: +39 333 1234567
-📍 Indirizzo spedizione: Via Roma 10, 00100 Roma (RM)
-📝 Note ordine: Consegna preferibilmente nel pomeriggio
-
-_Resto in attesa di conferma disponibilità e dettagli per la spedizione._
+UPDATE public.profiles
+SET role = 'superadmin'
+WHERE id = 'uuid-dell-utente';
 ```
 
----
+La migrazione crea le categorie Ombrelli, Pochette, Tazze e Bijoux se mancano. Dal pannello prodotti, assegna gli articoli esistenti alla categoria appropriata e compila le opzioni di personalizzazione. Gli articoli contrassegnati **Richiede un preventivo su WhatsApp** mostrano un pulsante di contatto al posto dell’acquisto. La home mostra le collezioni che contengono articoli attivi. Il bucket `products-images` ospita le foto caricate dal pannello.
 
-## 🚀 Deploy su Vercel
+### Ambiente
 
-1. Fai il push del codice sulla tua repository Git (GitHub, GitLab o Bitbucket).
-2. Vai sulla dashboard di [Vercel](https://vercel.com) e clicca **"Add New Project"**.
-3. Importa la repository.
-4. Nelle **Environment Variables**, aggiungi le 3 variabili d'ambiente:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_WHATSAPP_NUMBER`
-5. Clicca **"Deploy"**. Vercel compilerà e pubblicherà la tua applicazione con CDN globale e certificati SSL automatici!
+Copia [`.env.example`](.env.example) in `.env.local` e configura URL Supabase, chiave pubblica, numero WhatsApp in formato internazionale senza `+` e `SUPABASE_SERVICE_ROLE_KEY`. Imposta le stesse variabili sull’hosting. La chiave service role serve solo al Route Handler del checkout e va tenuta fuori dalle variabili pubbliche.
 
+Avvia il sito con `npm run dev`.
+
+### Checkout
+
+Il server verifica quantità, disponibilità e prezzi e salva l’ordine con le righe in una singola transazione. Il riepilogo mostra il codice, il totale degli articoli e i comandi per aprire WhatsApp o copiare il messaggio. Gli ordini in attesa di risposta non riservano stock, così il negozio può confermare disponibilità e spedizione in chat.
+
+### Verifiche
+
+Esegui `npm run typecheck`, `npm run lint`, `npm test` e `npm run build`. La CI ripete gli stessi controlli. I test SQL eseguono lo schema su PostgreSQL locale integrato e non richiedono credenziali Supabase.

@@ -170,7 +170,7 @@ export default function AdminCategoriesPage() {
               ) : categories.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-slate-400">
-                    Nessuna categoria presente. Clicca su "Nuova Categoria" per crearne una.
+                    Nessuna categoria presente. Clicca su &ldquo;Nuova Categoria&rdquo; per crearne una.
                   </td>
                 </tr>
               ) : (

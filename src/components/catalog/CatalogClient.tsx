@@ -116,60 +116,8 @@ export function CatalogClient({
           if (!isWomen) return false;
         }
 
-        // 2. Filtro Categoria Merceologica (Gioielli, Borse, Accessori, etc.)
-        if (selectedCategory) {
-          const target = selectedCategory.toLowerCase().trim();
-
-          // Corrispondenza diretta per slug o id
-          if (catSlug === target || product.category_id === target) {
-            // Continua
-          } else if (target === 'gioielli') {
-            const isJewelry =
-              catSlug.includes('gioiell') ||
-              catSlug.includes('orolog') ||
-              catName.includes('gioiell') ||
-              prodName.includes('collana') ||
-              prodName.includes('anello') ||
-              prodName.includes('braccial') ||
-              prodName.includes('choker') ||
-              prodName.includes('orecchin') ||
-              prodName.includes('gioiell') ||
-              prodName.includes('oro') ||
-              prodName.includes('argento');
-            if (!isJewelry) return false;
-          } else if (target === 'borse') {
-            const isBag =
-              catSlug.includes('bors') ||
-              catSlug.includes('pelletteria') ||
-              catName.includes('bors') ||
-              prodName.includes('borsa') ||
-              prodName.includes('pochette') ||
-              prodName.includes('zaino') ||
-              prodName.includes('tote') ||
-              prodName.includes('clutch') ||
-              prodName.includes('tracolla') ||
-              prodName.includes('baguette') ||
-              prodName.includes('bauletto') ||
-              prodDesc.includes('borsa');
-            if (!isBag) return false;
-          } else if (target === 'accessori') {
-            const isAccessory =
-              catSlug.includes('accessori') ||
-              catName.includes('accessori') ||
-              prodName.includes('portafoglio') ||
-              prodName.includes('cintura') ||
-              prodName.includes('orologio') ||
-              prodName.includes('titanio') ||
-              prodName.includes('occhiali');
-            if (!isAccessory) return false;
-          } else if (target === 'ombrelli' || target === 'tazze') {
-            const categoryRoot = target === 'ombrelli' ? 'ombrell' : 'tazz';
-            if (![catSlug, catName, prodName].some((value) => value.includes(categoryRoot))) return false;
-          } else if (catSlug.includes(target) || catName.includes(target)) {
-            // Match parziale
-          } else {
-            return false;
-          }
+        if (selectedCategory && catSlug !== selectedCategory && product.category_id !== selectedCategory) {
+          return false;
         }
 
         // 3. Filtro Ricerca
@@ -203,7 +151,7 @@ export function CatalogClient({
     if (!selectedCategory) return null;
     const catMap: Record<string, string> = {
       gioielli: 'Bijoux',
-      borse: 'Borse e pochette',
+      pochette: 'Pochette',
       ombrelli: 'Ombrelli',
       tazze: 'Tazze',
       accessori: 'Accessori di Stile',
@@ -302,7 +250,7 @@ export function CatalogClient({
 
         {searchQuery && (
           <span className="text-[11px] font-normal tracking-normal text-stone-400 font-sans">
-            Ricerca: "{searchQuery}"
+            Ricerca: &ldquo;{searchQuery}&rdquo;
           </span>
         )}
       </div>
@@ -310,7 +258,7 @@ export function CatalogClient({
       {/* Griglia Prodotti */}
       <ProductGrid
         products={filteredProducts}
-        emptyMessage="Nessun articolo risponde ai criteri selezionati. Modifica il reparto o la categoria per visualizzare le altre collezioni."
+        emptyMessage="Nessun articolo corrisponde ai filtri selezionati."
       />
     </div>
   );

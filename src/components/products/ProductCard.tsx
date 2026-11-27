@@ -18,13 +18,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const { toggleItem, isInWishlist } = useWishlistStore();
   const isInCart = items.some((item) => item.productId === product.id);
   const isFavorite = isInWishlist(product.id);
-  const isOutOfStock = product.stock <= 0;
-  const isLowStock = product.stock > 0 && product.stock <= 3;
+  const isOutOfStock = !product.quote_required && product.stock <= 0;
+  const isLowStock = !product.quote_required && product.stock > 0 && product.stock <= 3;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isOutOfStock) {
+    if (!isOutOfStock && !product.quote_required) {
       addItem(product, 1);
     }
   };
@@ -81,33 +81,34 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Bottone d'azione rapido che appare in modo fluido all'hover dal basso */}
-        <div className="absolute inset-x-3 bottom-3 z-20 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 hidden sm:block">
-          <button
-            type="button"
-            disabled={isOutOfStock}
-            onClick={handleAddToCart}
-            className={`w-full h-10 px-4 text-[10px] tracking-[0.2em] uppercase font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-luxury cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-              isInCart
-                ? 'bg-emerald-800 text-white hover:bg-emerald-900'
-                : 'bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-white'
-            }`}
-          >
-            {isInCart ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-[#B8915D]" />
-                <span>Nel Carrello</span>
-              </>
-            ) : isOutOfStock ? (
-              <span>Non Disponibile</span>
-            ) : (
-              <>
-                <ShoppingBag className="h-3.5 w-3.5 stroke-[1.4]" />
-                <span>Aggiungi al Carrello</span>
-              </>
-            )}
-          </button>
-        </div>
+        {!product.quote_required && (
+          <div className="absolute inset-x-3 bottom-3 z-20 transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 hidden sm:block">
+            <button
+              type="button"
+              disabled={isOutOfStock}
+              onClick={handleAddToCart}
+              className={`w-full h-10 px-4 text-[10px] tracking-[0.2em] uppercase font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-luxury cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isInCart
+                  ? 'bg-emerald-800 text-white hover:bg-emerald-900'
+                  : 'bg-stone-900 text-white hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-white'
+              }`}
+            >
+              {isInCart ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-[#B8915D]" />
+                  <span>Nel Carrello</span>
+                </>
+              ) : isOutOfStock ? (
+                <span>Non Disponibile</span>
+              ) : (
+                <>
+                  <ShoppingBag className="h-3.5 w-3.5 stroke-[1.4]" />
+                  <span>Aggiungi al Carrello</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. Dettagli Prodotto Minimali */}
@@ -115,7 +116,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div>
           {/* Categoria */}
           {product.category?.name && (
-            <span className="text-[9px] tracking-[0.22em] uppercase text-[#B8915D] font-medium block mb-1">
+            <span className="text-[9px] tracking-[0.22em] uppercase text-[#795724] dark:text-[#D7B47D] font-medium block mb-1">
               {product.category.name}
             </span>
           )}
@@ -131,10 +132,12 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Prezzo & Stock */}
         <div className="mt-3 pt-2.5 border-t border-stone-100 dark:border-stone-800/80 flex items-center justify-between">
           <p className="text-xs sm:text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-            {formatCurrency(Number(product.price))}
+            {product.quote_required ? 'Su preventivo' : formatCurrency(Number(product.price))}
           </p>
 
-          {isLowStock ? (
+          {product.quote_required ? (
+            <Link href={`/product/${product.slug}`} className="text-xs underline">Dettagli</Link>
+          ) : isLowStock ? (
             <span className="inline-flex items-center gap-1 text-[9px] tracking-wide font-medium text-amber-700 dark:text-amber-400">
               <Flame className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
               <span>Ultime {product.stock}</span>

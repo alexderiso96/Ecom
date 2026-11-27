@@ -38,9 +38,9 @@ const VISUAL_CATEGORIES: VisualCategoryCard[] = [
     image: '/dream-creation/bijoux.jpg',
   },
   {
-    label: 'Borse e pochette',
-    subtitle: 'Borse, pochette e tracolle',
-    slug: 'borse',
+    label: 'Pochette',
+    subtitle: 'Accessori ricamati',
+    slug: 'pochette',
     image: '/dream-creation/ricami.jpg',
   },
   {
@@ -77,7 +77,7 @@ export function ProductFilters({
   // Categorie custom da Supabase che non rientrano nelle 3 macro-categorie
   const customCategories = categories.filter((c) => {
     const s = c.slug.toLowerCase();
-    return !['gioielli', 'borse', 'ombrelli', 'tazze', 'accessori', 'donna', 'uomo'].includes(s);
+    return !VISUAL_CATEGORIES.some(({ slug }) => slug === s) && s !== 'donna' && s !== 'uomo';
   });
 
   return (
@@ -185,7 +185,7 @@ export function ProductFilters({
             <button
               type="button"
               onClick={() => onSelectCategory(null)}
-              className="text-[10px] tracking-[0.14em] uppercase text-[#B8915D] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[10px] tracking-[0.14em] uppercase text-[#795724] dark:text-[#D7B47D] hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Mostra tutte</span>
               <X className="h-3 w-3" />

@@ -26,6 +26,8 @@ export default function AdminProductsPage() {
   const [productToken, setProductToken] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
+  const [personalization, setPersonalization] = useState('');
+  const [quoteRequired, setQuoteRequired] = useState(false);
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('10');
   const [imageUrl, setImageUrl] = useState('');
@@ -64,6 +66,8 @@ export default function AdminProductsPage() {
     setSlug(generateProductSlug('', token));
     setCategoryId(categories[0]?.id || '');
     setDescription('');
+    setPersonalization('');
+    setQuoteRequired(false);
     setPrice('');
     setStock('10');
     setImageUrl('');
@@ -82,6 +86,8 @@ export default function AdminProductsPage() {
     setSlug(p.slug);
     setCategoryId(p.category_id || '');
     setDescription(p.description || '');
+    setPersonalization(p.personalization || '');
+    setQuoteRequired(Boolean(p.quote_required));
     setPrice(String(p.price));
     setStock(String(p.stock));
     setImageUrl(p.image_url || '');
@@ -224,7 +230,8 @@ export default function AdminProductsPage() {
       slug: finalSlug,
       category_id: categoryId,
       description,
-      price,
+      price: quoteRequired && !price ? 0 : price,
+      allowZeroPrice: quoteRequired,
       stock,
       image_url: finalCover,
       images: finalImages,
@@ -240,7 +247,11 @@ export default function AdminProductsPage() {
 
     try {
       const supabase = createClient();
-      const payload = validation.data;
+      const payload = {
+        ...validation.data,
+        personalization: personalization.trim() || null,
+        quote_required: quoteRequired,
+      };
 
       if (editingProduct) {
         const { error } = await supabase
@@ -498,7 +509,7 @@ export default function AdminProductsPage() {
               type="number"
               step="0.01"
               placeholder="99.99"
-              required
+              required={!quoteRequired}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -525,6 +536,18 @@ export default function AdminProductsPage() {
               className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
+
+          <Input
+            label="Opzioni di personalizzazione"
+            placeholder="Es. iniziali ricamate, filo oro o argento"
+            maxLength={500}
+            value={personalization}
+            onChange={(event) => setPersonalization(event.target.value)}
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={quoteRequired} onChange={(event) => setQuoteRequired(event.target.checked)} />
+            Richiede un preventivo su WhatsApp
+          </label>
 
           {/* Galleria Foto Prodotto (Foto Multiple) */}
           <div className="space-y-3 p-4 rounded-2xl border border-stone-200/90 bg-stone-50/60 dark:border-stone-800 dark:bg-stone-900/60">

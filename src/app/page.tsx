@@ -9,7 +9,7 @@ import { ProductGrid } from '@/components/products/ProductGrid';
 
 const collections = [
   { name: 'Ombrelli', slug: 'ombrelli', image: 'ombrelli.jpg' },
-  { name: 'Borse e pochette', slug: 'borse', image: 'ricami.jpg' },
+  { name: 'Pochette', slug: 'pochette', image: 'ricami.jpg' },
   { name: 'Bijoux', slug: 'gioielli', image: 'bijoux.jpg' },
   { name: 'Tazze', slug: 'tazze', image: 'tazze.jpg' },
 ];
@@ -18,17 +18,26 @@ export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let featuredProducts: Product[] = [];
+  let visibleCollections: typeof collections = [];
   try {
     const supabase = createClient();
-    const { data: prodData } = await supabase
-      .from('products')
-      .select('*, category:categories(*)')
-      .eq('is_featured', true)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(8);
+    const [featured, available] = await Promise.all([
+      supabase.from('products')
+        .select('*, category:categories(*)')
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(8),
+      supabase.from('categories')
+        .select('slug, products!inner(id)')
+        .in('slug', collections.map(({ slug }) => slug))
+        .eq('products.is_active', true)
+        .limit(1, { referencedTable: 'products' }),
+    ]);
 
-    featuredProducts = prodData ?? [];
+    featuredProducts = featured.data ?? [];
+    const availableSlugs = new Set(available.data?.map(({ slug }) => slug));
+    visibleCollections = collections.filter(({ slug }) => availableSlugs.has(slug));
   } catch (error) {
     console.error('Errore caricamento dati home:', error);
   }
@@ -39,51 +48,53 @@ export default async function HomePage() {
     <div className="space-y-16 sm:space-y-24">
       <Hero />
 
-      <section className="container">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 border-b border-stone-200/80 dark:border-stone-800/80 pb-5">
-          <div>
-            <h2 className="font-serif text-3xl sm:text-4xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
-              Le collezioni
-            </h2>
-          </div>
-          <Link
-            href="/catalog"
-            className="inline-flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-semibold text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
-          >
-            <span>Tutto il catalogo</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {collections.map((category) => (
+      {visibleCollections.length > 0 && (
+        <section className="container">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 border-b border-stone-200/80 dark:border-stone-800/80 pb-5">
+            <div>
+              <h2 className="font-serif text-3xl sm:text-4xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
+                Le collezioni
+              </h2>
+            </div>
             <Link
-              key={category.slug}
-              href={`/catalog?category=${category.slug}`}
-              className="group relative overflow-hidden aspect-[4/5] bg-stone-100 dark:bg-stone-900 border border-stone-200/70 dark:border-stone-800 transition-all duration-500 hover:shadow-luxury rounded-2xl"
+              href="/catalog"
+              className="inline-flex items-center gap-2 text-xs tracking-[0.16em] uppercase font-semibold text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
             >
-              <Image
-                src={`/dream-creation/${category.image}`}
-                alt=""
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(max-width: 1023px) 50vw, 25vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/20 to-transparent transition-opacity group-hover:opacity-90" />
-
-              <div className="absolute inset-0 p-3 sm:p-5 flex flex-col justify-end text-white">
-                <h3 className="font-serif text-lg sm:text-2xl font-normal text-white group-hover:text-[#F1E8DC] transition-colors tracking-wide">
-                  {category.name}
-                </h3>
-                <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs tracking-[0.16em] uppercase font-medium">
-                  <span>Esplora Selezione</span>
-                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
+              <span>Tutto il catalogo</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {visibleCollections.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/catalog?category=${category.slug}`}
+                className="group relative overflow-hidden aspect-[4/5] bg-stone-100 dark:bg-stone-900 border border-stone-200/70 dark:border-stone-800 transition-all duration-500 hover:shadow-luxury rounded-2xl"
+              >
+                <Image
+                  src={`/dream-creation/${category.image}`}
+                  alt=""
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 1023px) 50vw, 25vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/20 to-transparent transition-opacity group-hover:opacity-90" />
+
+                <div className="absolute inset-0 p-3 sm:p-5 flex flex-col justify-end text-white">
+                  <h3 className="font-serif text-lg sm:text-2xl font-normal text-white group-hover:text-[#F1E8DC] transition-colors tracking-wide">
+                    {category.name}
+                  </h3>
+                  <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs tracking-[0.16em] uppercase font-medium">
+                    <span>Esplora Selezione</span>
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {featuredProducts.length > 0 && (
         <section className="container">

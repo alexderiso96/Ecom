@@ -30,7 +30,7 @@ interface BoutiqueNavItem {
 // Categorie merceologiche reali (Donna e Uomo sono gestiti separatamente come Reparti)
 const boutiqueCategories: BoutiqueNavItem[] = [
   { label: 'Bijoux', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
-  { label: 'Pochette', href: '/catalog?category=borse', categorySlug: 'borse' },
+  { label: 'Pochette', href: '/catalog?category=pochette', categorySlug: 'pochette' },
   { label: 'Ombrelli', href: '/catalog?category=ombrelli', categorySlug: 'ombrelli' },
   { label: 'Tazze', href: '/catalog?category=tazze', categorySlug: 'tazze' },
   { label: 'Catalogo', href: '/catalog', categorySlug: null },
@@ -422,7 +422,7 @@ function NavbarInner() {
                   key={item.label}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#B8915D] dark:text-stone-200 py-1 transition-colors"
+                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#795724] dark:text-stone-200 dark:hover:text-[#D7B47D] py-1 transition-colors"
                 >
                   {item.label}
                 </Link>
@@ -436,7 +436,7 @@ function NavbarInner() {
                 className="flex items-center justify-between text-xs tracking-[0.15em] uppercase text-stone-600 dark:text-stone-400 py-1"
               >
                 <span>Lista dei Desideri</span>
-                <span className="font-bold text-[#B8915D]">{totalWishlistItems}</span>
+                <span className="font-bold text-[#795724] dark:text-[#D7B47D]">{totalWishlistItems}</span>
               </Link>
               
               <a

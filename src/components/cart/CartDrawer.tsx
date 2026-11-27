@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, CheckCircle2, Mail, ShieldCheck, Lock } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, Mail, ShieldCheck, Lock } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { formatCurrency, buildWhatsAppCheckoutUrl } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppOrderMessage } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
 import { createClient } from '@/lib/supabase/client';
 
@@ -29,7 +29,10 @@ export function CartDrawer() {
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [emailError, setEmailError] = useState('');
-  const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<{ code: string; message: string; total: number } | null>(null);
+  const [copyStatus, setCopyStatus] = useState('');
+  const submitting = useRef(false);
+  const lastAttempt = useRef<{ fingerprint: string; key: string }>();
 
   // Sistemi di sicurezza Anti-Bot & Anti-Abuso
   const [honeypot, setHoneypot] = useState('');
@@ -77,7 +80,6 @@ export function CartDrawer() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setLastCreatedOrder(null);
         closeCart();
       }
     };
@@ -97,103 +99,74 @@ export function CartDrawer() {
   const totalItems = getTotalItems();
 
   const handleWhatsAppCheckout = async () => {
-    if (items.length === 0 || isSubmittingOrder) return;
-
-    // Cooldown di sicurezza locale anti-doppio clic/spam compulsivo (30 secondi)
-    try {
-      const lastOrderTime = Number(sessionStorage.getItem('aura_last_order_ts') || '0');
-      const elapsed = Date.now() - lastOrderTime;
-      if (lastOrderTime && elapsed < 30000) {
-        const remaining = Math.ceil((30000 - elapsed) / 1000);
-        setEmailError(`Richiesta inviata di recente. Per motivi di sicurezza attendi ${remaining} secondi prima di un nuovo invio.`);
-        return;
-      }
-    } catch {}
-
-    // Validazione obbligatoria dell'email cliente
-    const trimmedEmail = customerEmail.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+    if (!items.length || submitting.current) return;
+    const email = customerEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailError('Inserisci un indirizzo email valido per registrare il tuo ordine.');
       return;
     }
+
+    const customer = {
+      customerName: customerName.trim() || email.split('@')[0],
+      customerEmail: email,
+      customerPhone: customerPhone.trim(),
+      shippingAddress: shippingAddress.trim(),
+      customerNotes: customerNotes.trim(),
+    };
+    const orderItems = items.map(({ productId, quantity }) => ({ productId, quantity }))
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+
+    submitting.current = true;
     setEmailError('');
-
-    // Salva in localStorage per facilitare i prossimi ordini
-    try {
-      localStorage.setItem('aura_customer_email', trimmedEmail);
-      if (customerName.trim()) localStorage.setItem('aura_customer_name', customerName.trim());
-      if (customerPhone.trim()) localStorage.setItem('aura_customer_phone', customerPhone.trim());
-    } catch {}
-
     setIsSubmittingOrder(true);
-
-    let generatedOrderNumber: string | undefined;
-
     try {
-      // 1. Salva l'ordine su Supabase con codice univoco, filtri rate limiting e controlli anti-bot
+      const encoded = new TextEncoder().encode(JSON.stringify({ customer, orderItems }));
+      const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', encoded))).join(',');
+      let attempt = lastAttempt.current;
+      try {
+        const saved = sessionStorage.getItem('dream_checkout_attempt');
+        if (saved && !attempt) attempt = JSON.parse(saved);
+      } catch {}
+
+      const key = attempt?.fingerprint === fingerprint ? attempt.key : crypto.randomUUID();
+      lastAttempt.current = { fingerprint, key };
+      try {
+        sessionStorage.setItem('dream_checkout_attempt', JSON.stringify(lastAttempt.current));
+      } catch {}
+
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items,
-          totalPrice,
-          customerName: customerName.trim() || trimmedEmail.split('@')[0],
-          customerEmail: trimmedEmail,
-          customerPhone: customerPhone.trim() || undefined,
-          shippingAddress: shippingAddress.trim() || undefined,
-          customerNotes: customerNotes.trim() || undefined,
-          hp_website: honeypot,
-          clientTimestamp: drawerOpenedAt,
+          checkoutKey: key, items: orderItems, ...customer,
+          hp_website: honeypot, clientTimestamp: drawerOpenedAt,
         }),
       });
-
       const data = await res.json();
-
-      // Controllo blocco Rate Limiting o Anti-Bot
-      if (res.status === 429 || res.status === 403) {
-        setEmailError(data.error || 'Invio bloccato dai sistemi di sicurezza anti-spam. Riprova più tardi.');
-        setIsSubmittingOrder(false);
-        return;
+      if (!res.ok || !data.orderNumber) {
+        throw new Error(data.error || 'Registrazione ordine non riuscita.');
       }
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Errore durante la registrazione dell\'ordine.');
-      }
-
-      if (data.orderNumber) {
-        generatedOrderNumber = data.orderNumber;
-        setLastCreatedOrder(data.orderNumber);
-        try {
-          sessionStorage.setItem('aura_last_order_ts', String(Date.now()));
-        } catch {}
-      }
-    } catch (err: any) {
-      console.warn('Errore salvataggio ordine protetto:', err);
-      setEmailError(err.message || 'Errore di connessione. Riprova tra poco.');
-      setIsSubmittingOrder(false);
-      return;
+      setReceipt({
+        code: data.orderNumber,
+        total: data.totalPrice,
+        message: buildWhatsAppOrderMessage({ ...customer, ...data, orderNumber: data.orderNumber }),
+      });
+      setCopyStatus('');
+      lastAttempt.current = undefined;
+      try {
+        sessionStorage.removeItem('dream_checkout_attempt');
+      } catch {}
+      if (useCartStore.getState().items === items) clearCart();
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Connessione interrotta. Riprova.');
     } finally {
+      submitting.current = false;
       setIsSubmittingOrder(false);
     }
-
-    // 2. Genera il messaggio WhatsApp includendo il codice ordine verificato
-    const whatsappUrl = buildWhatsAppCheckoutUrl({
-      items,
-      totalPrice,
-      orderNumber: generatedOrderNumber,
-      customerName: customerName.trim() || trimmedEmail.split('@')[0],
-      customerEmail: trimmedEmail,
-      customerPhone: customerPhone.trim() || undefined,
-      shippingAddress: shippingAddress.trim() || undefined,
-      customerNotes: customerNotes.trim() || undefined,
-    });
-
-    window.open(whatsappUrl, '_blank');
-
-    // 3. Svuota completamente il carrello dopo il checkout su WhatsApp
-    clearCart();
   };
+
+  const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -201,7 +174,6 @@ export function CartDrawer() {
       <div
         className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={() => {
-          setLastCreatedOrder(null);
           closeCart();
         }}
       />
@@ -231,7 +203,6 @@ export function CartDrawer() {
 
             <button
               onClick={() => {
-                setLastCreatedOrder(null);
                 closeCart();
               }}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white transition-colors"
@@ -243,7 +214,7 @@ export function CartDrawer() {
           {/* Cart Item List */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-thin">
             {items.length === 0 ? (
-              lastCreatedOrder ? (
+              receipt ? (
                 <div className="h-full flex flex-col items-center justify-center text-center py-12 px-4 space-y-4">
                   <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/20 shadow-xs animate-bounce">
                     <ShieldCheck className="h-8 w-8 stroke-[1.8]" />
@@ -253,10 +224,10 @@ export function CartDrawer() {
                       Verificato a Sistema
                     </span>
                     <h3 className="font-serif text-2xl text-stone-900 dark:text-white mt-2 font-normal">
-                      Ordine Inviato su WhatsApp
+                      Ordine registrato
                     </h3>
                     <p className="text-xs text-stone-500 max-w-xs mt-2 mx-auto leading-relaxed">
-                      La conversazione con Dream Creation è stata aperta con il riepilogo sicuro. Il carrello è stato svuotato.
+                      Controlla il totale degli articoli e invia il riepilogo a Dream Creation su WhatsApp.
                     </p>
                   </div>
 
@@ -265,19 +236,33 @@ export function CartDrawer() {
                       Codice ordine
                     </span>
                     <span className="font-mono text-sm font-black text-stone-900 dark:text-stone-100 tracking-wider">
-                      #{lastCreatedOrder}
+                      #{receipt.code}
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setLastCreatedOrder(null);
-                      closeCart();
-                    }}
-                    className="rounded-full bg-stone-900 text-white hover:bg-stone-800 px-7 py-3 text-xs font-bold tracking-wider uppercase shadow-sm transition-all dark:bg-white dark:text-stone-900"
+                  <p className="text-sm">Totale articoli {formatCurrency(receipt.total)}</p>
+                  <a
+                    href={`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(receipt.message)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-stone-900 px-7 py-3 text-sm font-semibold text-white dark:bg-white dark:text-stone-900"
                   >
-                    Continua lo Shopping
+                    Apri WhatsApp
+                  </a>
+                  <button type="button" className="text-sm underline" onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(receipt.message);
+                      setCopyStatus('Riepilogo copiato.');
+                    } catch {
+                      setCopyStatus('Copia il testo dal campo qui sotto.');
+                    }
+                  }}>
+                    Copia riepilogo
                   </button>
+                  <p role="status" className="text-xs">{copyStatus}</p>
+                  {copyStatus.startsWith('Copia il') && (
+                    <textarea aria-label="Riepilogo ordine" readOnly value={receipt.message} className="w-full rounded border p-2 text-sm" />
+                  )}
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center py-16">
@@ -498,8 +483,8 @@ export function CartDrawer() {
                   <span>{formatCurrency(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between text-slate-500 font-medium">
-                  <span>Spedizione Express 24/48h</span>
-                  <span className="text-emerald-600 font-bold">Gratuita</span>
+                  <span>Spedizione</span>
+                  <span className="text-emerald-600 font-bold">Da concordare</span>
                 </div>
                 <div className="flex justify-between text-base font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
                   <span>Totale Stimato</span>
@@ -511,22 +496,15 @@ export function CartDrawer() {
               <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-stone-100/80 text-stone-700 dark:bg-stone-900/80 dark:text-stone-300 text-[11px] leading-relaxed border border-stone-200 dark:border-stone-800">
                 <ShieldCheck className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" />
                 <span>
-                  <b>Checkout Protetto:</b> Verrà generato un codice ordine univoco verificato e si aprirà WhatsApp con il nostro Concierge.
+                  <b>Checkout Protetto:</b> Dopo la registrazione potrai inviare il riepilogo via WhatsApp.
                 </span>
               </div>
-
-              {lastCreatedOrder && (
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/70 dark:border-indigo-800 dark:text-indigo-300 text-xs font-semibold">
-                  <CheckCircle2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <span>Ordine registrato a sistema: <b>{lastCreatedOrder}</b></span>
-                </div>
-              )}
 
               {/* High-impact WhatsApp Button */}
               <button
                 disabled={isSubmittingOrder}
                 onClick={handleWhatsAppCheckout}
-                className="w-full flex items-center justify-center gap-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 text-sm shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-60 transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold h-12 text-sm shadow-lg shadow-emerald-600/25 active:scale-[0.99] disabled:opacity-60 transition-all cursor-pointer"
               >
                 {isSubmittingOrder ? (
                   <>
@@ -536,7 +514,7 @@ export function CartDrawer() {
                 ) : (
                   <>
                     <MessageCircle className="h-4 w-4 stroke-[2.2]" />
-                    <span>Procedi all'Ordine su WhatsApp</span>
+                    <span>Registra ordine</span>
                   </>
                 )}
               </button>

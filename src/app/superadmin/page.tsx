@@ -27,7 +27,7 @@ export default async function SuperAdminDashboardPage() {
           SuperAdmin Control Room
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Monitora la sicurezza, l'assegnazione dei permessi RBAC e gestisci i ruoli degli utenti.
+          Monitora la sicurezza, l’assegnazione dei permessi RBAC e gestisci i ruoli degli utenti.
         </p>
       </div>
 

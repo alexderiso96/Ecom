@@ -128,12 +128,18 @@ export default function AdminOrdersPage() {
     return matchesStatus && matchesSearch;
   });
 
-  // Metriche
-  const totalRevenue = orders
-    .filter((o) => o.status !== 'cancelled')
-    .reduce((sum, o) => sum + Number(o.total_amount), 0);
-  const pendingOrders = orders.filter((o) => o.status === 'whatsapp_pending').length;
-  const completedOrders = orders.filter((o) => o.status === 'completed').length;
+  const metrics = [
+    { label: 'Richieste WhatsApp', statuses: ['whatsapp_pending'] },
+    { label: 'Ordini confermati in corso', statuses: ['confirmed', 'processing', 'shipped'] },
+    { label: 'Ordini completati', statuses: ['completed'] },
+  ].map(({ label, statuses }) => {
+    const matching = orders.filter(({ status }) => statuses.includes(status));
+    return {
+      label,
+      count: matching.length,
+      value: matching.reduce((sum, order) => sum + Number(order.total_amount), 0),
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -144,7 +150,7 @@ export default function AdminOrdersPage() {
             Gestione Ordini
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Visualizza gli ordini registrati, aggiorna gli stati di avanzamento e monitora i ricavi.
+            Visualizza gli ordini registrati, aggiorna gli stati e consulta il valore degli articoli.
           </p>
         </div>
 
@@ -157,43 +163,14 @@ export default function AdminOrdersPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl border border-slate-200/80 bg-white/80 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Totale Ordini
-          </span>
-          <div className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
-            {orders.length}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {metrics.map(({ label, count, value }) => (
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{label}</p>
+            <p className="mt-2 text-2xl font-bold">{formatCurrency(value)}</p>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{count} {count === 1 ? 'ordine' : 'ordini'}</p>
           </div>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 bg-white/80 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Fatturato Ordini
-          </span>
-          <div className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(totalRevenue)}
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 bg-white/80 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            In Attesa WhatsApp
-          </span>
-          <div className="mt-2 text-2xl font-black text-amber-600 dark:text-amber-400">
-            {pendingOrders}
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-slate-200/80 bg-white/80 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Ordini Consegnati
-          </span>
-          <div className="mt-2 text-2xl font-black text-indigo-600 dark:text-indigo-400">
-            {completedOrders}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Barra Ricerca & Filtro Stato */}
@@ -202,7 +179,7 @@ export default function AdminOrdersPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Verifica codice (es. AURA-...), cliente o email..."
+            placeholder="Cerca codice ordine, cliente o email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
@@ -426,7 +403,7 @@ export default function AdminOrdersPage() {
                   </div>
                   {selectedOrder.notes && (
                     <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 italic">
-                      "{selectedOrder.notes}"
+                      &ldquo;{selectedOrder.notes}&rdquo;
                     </div>
                   )}
                 </div>

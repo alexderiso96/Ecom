@@ -13,7 +13,7 @@ interface ProductDetailActionsProps {
 export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-  const { addItem, openCart } = useCartStore();
+  const { addItem } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
 
   const isFavorite = isInWishlist(product.id);
@@ -21,6 +21,20 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const maxAvailable = product.stock;
   const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
+
+  if (product.quote_required) {
+    const message = encodeURIComponent(`Ciao! Vorrei un preventivo per ${product.name}. Posso conoscere le opzioni di personalizzazione?`);
+    return (
+      <a
+        href={`https://wa.me/${adminPhone}?text=${message}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-12 items-center gap-2 rounded-full bg-stone-900 px-5 font-semibold text-white dark:bg-stone-100 dark:text-stone-950"
+      >
+        <MessageCircle className="h-4 w-4" /> Chiedi un preventivo
+      </a>
+    );
+  }
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;

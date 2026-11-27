@@ -78,7 +78,7 @@ export default function WishlistPage() {
             La tua lista dei desideri è vuota
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mt-1 mb-6">
-            Non hai ancora salvato nessun articolo. Clicca sull'icona a forma di cuore sui prodotti che ti interessano per ritrovarli qui.
+            Non hai ancora salvato nessun articolo. Clicca sull’icona a forma di cuore sui prodotti che ti interessano per ritrovarli qui.
           </p>
           <Link
             href="/catalog"

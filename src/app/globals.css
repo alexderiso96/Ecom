@@ -105,3 +105,14 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid #795724;
+    outline-offset: 3px;
+  }
+
+  .dark :focus-visible {
+    outline-color: #d7b47d;
+  }
+}

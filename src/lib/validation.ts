@@ -47,6 +47,7 @@ export function validateProductInput(input: {
   category_id?: string | null;
   description?: string | null;
   price: string | number;
+  allowZeroPrice?: boolean;
   stock: string | number;
   image_url?: string | null;
   images?: string[] | null;
@@ -76,7 +77,7 @@ export function validateProductInput(input: {
   }
 
   const numericPrice = typeof input.price === 'number' ? input.price : parseFloat(input.price);
-  if (isNaN(numericPrice) || !isFinite(numericPrice) || numericPrice <= 0) {
+  if (isNaN(numericPrice) || !isFinite(numericPrice) || numericPrice < 0 || (!input.allowZeroPrice && numericPrice === 0)) {
     return {
       success: false,
       error: 'Il prezzo deve essere un numero positivo maggiore di zero (es. 29.99).',

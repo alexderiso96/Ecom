@@ -46,7 +46,8 @@ export function generateProductSlug(name?: string, customToken?: string): string
 }
 
 export interface WhatsAppOrderData {
-  items: CartItem[];
+  items: Pick<CartItem, 'name' | 'price' | 'quantity'>[];
+  createdAt?: string;
   totalPrice: number;
   orderNumber?: string;
   customerName?: string;
@@ -57,12 +58,10 @@ export interface WhatsAppOrderData {
 }
 
 /**
- * Genera il link wa.me formattato con tutti i dettagli dell'ordine
+ * Genera il riepilogo dell’ordine per WhatsApp
  */
-export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
-  const adminPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '393400000000';
-  
-  const dateStr = new Date().toLocaleDateString('it-IT', {
+export function buildWhatsAppOrderMessage(data: WhatsAppOrderData): string {
+  const dateStr = (data.createdAt ? new Date(data.createdAt) : new Date()).toLocaleDateString('it-IT', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -95,6 +94,6 @@ export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
 
   message += `\n_Resto in attesa di conferma disponibilità e dettagli per la spedizione._`;
 
-  return `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
+  return message;
 }
 

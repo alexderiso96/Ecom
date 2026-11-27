@@ -29,6 +29,8 @@ export interface Product {
   price: number;
   image_url: string | null;
   images?: string[] | null;
+  personalization?: string | null;
+  quote_required?: boolean;
   stock: number;
   is_featured: boolean;
   is_active: boolean;

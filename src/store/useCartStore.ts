@@ -27,6 +27,7 @@ export const useCartStore = create<CartState>()(
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
       addItem: (product: Product, quantity = 1) => {
+        if (product.quote_required || product.stock <= 0) return;
         const { items } = get();
         const existingItemIndex = items.findIndex((i) => i.productId === product.id);
 
@@ -40,6 +41,8 @@ export const useCartStore = create<CartState>()(
           updatedItems[existingItemIndex] = {
             ...currentItem,
             quantity: newQuantity,
+            price: Number(product.price),
+            maxStock: product.stock,
           };
           set({ items: updatedItems, isOpen: true });
         } else {

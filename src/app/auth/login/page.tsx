@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Sparkles, ArrowRight, CheckCircle2, Shield, User, KeyRound } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { safeInternalPath } from '@/lib/auth-redirect';
 import { Input } from '@/components/ui/Input';
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo');
+  const redirectTo = safeInternalPath(searchParams.get('redirectTo'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

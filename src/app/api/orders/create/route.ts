@@ -1,149 +1,92 @@
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { CartItem } from '@/types/database.types';
-import {
-  getClientIp,
-  checkOrderRateLimit,
-  verifyBotProtection,
-} from '@/lib/rate-limiter';
+import { checkOrderRateLimit, getClientIp, verifyBotProtection } from '@/lib/rate-limiter';
 
-interface CreateOrderPayload {
-  items: CartItem[];
-  totalPrice: number;
-  customerName: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  shippingAddress?: string;
-  customerNotes?: string;
-  hp_website?: string;
-  clientTimestamp?: number;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function field(value: unknown, max: number) {
+  if (value == null) return '';
+  if (typeof value !== 'string' || value.length > max) throw new Error('Invalid field');
+  return value.trim();
 }
 
 export async function POST(request: Request) {
+  let payload: {
+    key: string;
+    items: { product_id: string; quantity: number }[];
+    customer: { name: string; email: string; phone: string | null; address: string | null; notes: string | null };
+    honeypotValue: string;
+    clientTimestamp?: number;
+  };
   try {
-    const body: CreateOrderPayload = await request.json();
-
-    // 1. Verifica Anti-Bot (Honeypot + Tempo umano minimo di interazione)
-    const botCheck = verifyBotProtection({
-      honeypotValue: body.hp_website,
-      clientTimestamp: body.clientTimestamp,
+    const body = await request.json();
+    if (typeof body.checkoutKey !== 'string' || !uuid.test(body.checkoutKey) ||
+        !Array.isArray(body.items) || body.items.length < 1 || body.items.length > 50) {
+      throw new Error('Invalid checkout');
+    }
+    const items = body.items.map((item: { productId?: unknown; quantity?: unknown }) => {
+      if (typeof item?.productId !== 'string' || !uuid.test(item.productId) ||
+          typeof item.quantity !== 'number' || !Number.isInteger(item.quantity) ||
+          item.quantity < 1 || item.quantity > 100) throw new Error('Invalid item');
+      return { product_id: item.productId.toLowerCase(), quantity: item.quantity };
     });
-
-    if (!botCheck.isHuman) {
-      console.warn('[SECURITY BLOCKED] Richiesta bot intercettata:', botCheck.reason);
-      return NextResponse.json(
-        { error: 'Richiesta non autorizzata dai filtri di sicurezza.' },
-        { status: 403 }
-      );
-    }
-
-    // 2. Controllo Rate Limit rigoroso per IP ed Email (Max 4 ordini per IP / 3 per Email in 10m)
-    const clientIp = getClientIp(request);
-    const rateLimit = checkOrderRateLimit(clientIp, body.customerEmail);
-
-    if (!rateLimit.allowed) {
-      console.warn(`[RATE LIMIT EXCEEDED] IP: ${clientIp}, Email: ${body.customerEmail}`);
-      return NextResponse.json(
-        {
-          error:
-            rateLimit.reason ||
-            'Hai effettuato troppe richieste di ordine in poco tempo. Riprova tra qualche minuto.',
-          retryAfterSeconds: rateLimit.retryAfterSeconds,
-        },
-        { status: 429 }
-      );
-    }
-
-    // 3. Validazione carrello
-    if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
-      return NextResponse.json(
-        { error: 'Il carrello è vuoto. Impossibile creare l\'ordine.' },
-        { status: 400 }
-      );
-    }
-
-    const totalPrice = Number(body.totalPrice);
-
-    if (isNaN(totalPrice) || totalPrice < 0) {
-      return NextResponse.json(
-        { error: 'Totale ordine non valido.' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // Recupera email e nome con fallback sicuro dall'utente autenticato Supabase
-    const customerEmail =
-      body.customerEmail?.trim() ||
-      user?.email ||
-      null;
-
-    const customerName =
-      (body.customerName || '').trim() ||
-      user?.user_metadata?.full_name ||
-      (customerEmail ? customerEmail.split('@')[0] : 'Cliente');
-
-    // Genera codice identificativo univoco protetto (es. AURA-8942)
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `AURA-${Date.now().toString().slice(-4)}${randomSuffix}`;
-
-    // 4. Inserisci testata ordine
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        order_number: orderNumber,
-        user_id: user?.id || null,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: body.customerPhone?.trim() || null,
-        shipping_address: body.shippingAddress?.trim() || null,
-        notes: body.customerNotes?.trim() || null,
-        total_amount: totalPrice,
-        status: 'whatsapp_pending',
-      })
-      .select('id, order_number')
-      .single();
-
-    if (orderError || !order) {
-      console.error('Errore creazione ordine Supabase:', orderError);
-      return NextResponse.json(
-        { error: `Errore salvataggio ordine: ${orderError?.message || 'Sconosciuto'}` },
-        { status: 500 }
-      );
-    }
-
-    // 5. Inserisci elementi ordine (order_items)
-    const orderItemsPayload = body.items.map((item) => ({
-      order_id: order.id,
-      product_id: item.productId && item.productId.length === 36 ? item.productId : null,
-      product_name: item.name,
-      product_image: item.imageUrl,
-      price: Number(item.price),
-      quantity: Math.max(1, Number(item.quantity)),
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItemsPayload);
-
-    if (itemsError) {
-      console.error('Errore creazione order_items Supabase:', itemsError);
-    }
-
-    return NextResponse.json({
-      success: true,
-      orderNumber: order.order_number,
-      orderId: order.id,
-    });
-  } catch (err: any) {
-    console.error('Errore interno create order:', err);
-    return NextResponse.json(
-      { error: err.message || 'Errore interno del server.' },
-      { status: 500 }
-    );
+    const email = field(body.customerEmail, 254).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid email');
+    payload = {
+      key: body.checkoutKey as string,
+      items,
+      customer: {
+        name: field(body.customerName, 120) || email.split('@')[0],
+        email,
+        phone: field(body.customerPhone, 40) || null,
+        address: field(body.shippingAddress, 300) || null,
+        notes: field(body.customerNotes, 1000) || null,
+      },
+      honeypotValue: field(body.hp_website, 200),
+      clientTimestamp: typeof body.clientTimestamp === 'number' ? body.clientTimestamp : undefined,
+    };
+  } catch {
+    return NextResponse.json({ error: 'Controlla i dati di contatto e gli articoli nel carrello.' }, { status: 400 });
   }
+
+  if (!verifyBotProtection(payload).isHuman) {
+    return NextResponse.json({ error: 'Attendi un momento e riprova.' }, { status: 403 });
+  }
+
+  const limit = checkOrderRateLimit(getClientIp(request), payload.customer.email);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: limit.reason }, {
+      status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds ?? 60) },
+    });
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    return NextResponse.json({ error: 'Checkout temporaneamente non disponibile.' }, { status: 503 });
+  }
+
+  try {
+    const { data: { user } } = await createClient().auth.getUser();
+    const supabase = createServiceClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await supabase.rpc('create_checkout', {
+      p_key: payload.key, p_user: user?.id ?? null,
+      p_customer: payload.customer, p_items: payload.items,
+    });
+    if (!error && data?.orderNumber) return NextResponse.json(data);
+    if (error?.code === 'P0001') {
+      return NextResponse.json({ error: 'Un articolo o la quantità selezionata non è disponibile. Aggiorna il carrello.' }, { status: 409 });
+    }
+    if (error?.code === 'P0002') {
+      return NextResponse.json({ error: 'Questa richiesta è già associata a un altro ordine.' }, { status: 409 });
+    }
+    console.error('Errore registrazione ordine', error?.code);
+  } catch (error) {
+    console.error('Checkout non disponibile', error instanceof Error ? error.name : '');
+  }
+
+  return NextResponse.json({ error: 'Registrazione non riuscita. Puoi riprovare con gli stessi dati.' }, { status: 500 });
 }
