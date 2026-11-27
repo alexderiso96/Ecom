@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import { ProductImage } from '@/components/products/ProductImage';
+import { getProductImageUrls } from '@/lib/product-images';
 import { Plus, Pencil, Trash2, ShoppingBag, Upload, AlertCircle, Check, Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database.types';
@@ -91,10 +92,8 @@ export default function AdminProductsPage() {
     setQuoteRequired(Boolean(p.quote_required));
     setPrice(String(p.price));
     setStock(String(p.stock));
-    setImageUrl(p.image_url || '');
-    const productImages = Array.isArray(p.images) && p.images.length > 0
-      ? p.images
-      : (p.image_url ? [p.image_url] : []);
+    const productImages = getProductImageUrls(p);
+    setImageUrl(productImages[0] || '');
     setImages(productImages);
     setInputImageUrl('');
     setIsFeatured(p.is_featured);
@@ -252,7 +251,9 @@ export default function AdminProductsPage() {
         const { error } = await supabase
           .from('products')
           .update(payload)
-          .eq('id', editingProduct.id);
+          .eq('id', editingProduct.id)
+          .select('id')
+          .single();
         if (error) throw error;
       } else {
         const { error } = await supabase.from('products').insert(payload);
@@ -344,92 +345,95 @@ export default function AdminProductsPage() {
                   </td>
                 </tr>
               ) : (
-                products.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                          {p.image_url ? (
-                            <Image
-                              src={p.image_url}
-                              alt={p.name}
-                              fill
-                              className="object-cover"
-                              sizes="44px"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300">
-                              <ShoppingBag className="h-5 w-5" />
+                products.map((p) => {
+                  const [cover] = getProductImageUrls(p);
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                            {cover ? (
+                              <ProductImage
+                                src={cover}
+                                alt={p.name}
+                                fill
+                                className="object-cover"
+                                sizes="44px"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                <ShoppingBag className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              {p.name}
+                              {p.is_featured && (
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            {p.name}
-                            {p.is_featured && (
-                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
-                            <span>/{p.slug}</span>
-                            {Array.isArray(p.images) && p.images.length > 1 && (
-                              <span className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                                {p.images.length} foto
-                              </span>
-                            )}
+                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
+                              <span>/{p.slug}</span>
+                              {Array.isArray(p.images) && p.images.length > 1 && (
+                                <span className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                                  {p.images.length} foto
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
-                        {p.category?.name || 'Senza Categoria'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 font-black text-slate-900 dark:text-white">
-                      {formatCurrency(Number(p.price))}
-                    </td>
-                    <td className="px-6 py-3.5">
-                      {p.stock <= 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 border border-rose-500/20 dark:text-rose-400">
-                          Esaurito ({p.stock})
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700">
+                          {p.category?.name || 'Senza Categoria'}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 border border-emerald-500/20 dark:text-emerald-400">
-                          {p.stock} pz.
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <button
-                        onClick={() => toggleProductActive(p)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${
-                          p.is_active
-                            ? 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/25 dark:bg-emerald-950/70 dark:text-emerald-300'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                        }`}
-                      >
-                        {p.is_active ? 'Attivo' : 'Nascosto'}
-                      </button>
-                    </td>
-                    <td className="px-6 py-3.5 text-right space-x-1">
-                      <button
-                        onClick={() => openEditModal(p)}
-                        className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-                        title="Modifica"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id, p.name)}
-                        className="rounded-full p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
-                        title="Elimina"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-3.5 font-black text-slate-900 dark:text-white">
+                        {formatCurrency(Number(p.price))}
+                      </td>
+                      <td className="px-6 py-3.5">
+                        {p.stock <= 0 ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 border border-rose-500/20 dark:text-rose-400">
+                            Esaurito ({p.stock})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 border border-emerald-500/20 dark:text-emerald-400">
+                            {p.stock} pz.
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <button
+                          onClick={() => toggleProductActive(p)}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${
+                            p.is_active
+                              ? 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/25 dark:bg-emerald-950/70 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                          }`}
+                        >
+                          {p.is_active ? 'Attivo' : 'Nascosto'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-3.5 text-right space-x-1">
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="rounded-full p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                          title="Modifica"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          className="rounded-full p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -615,7 +619,7 @@ export default function AdminProductsPage() {
                           : 'border-stone-200 dark:border-stone-800 hover:border-stone-400'
                       }`}
                     >
-                      <Image
+                      <ProductImage
                         src={imgUrl}
                         alt={`Foto ${idx + 1}`}
                         fill

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getProductImageUrls } from '@/lib/product-images';
 import { CartItem, Product } from '@/types/database.types';
 
 interface CartState {
@@ -52,7 +53,7 @@ export const useCartStore = create<CartState>()(
             name: product.name,
             slug: product.slug,
             price: Number(product.price),
-            imageUrl: product.image_url,
+            imageUrl: getProductImageUrls(product)[0] ?? null,
             quantity: Math.min(quantity, product.stock > 0 ? product.stock : quantity),
             maxStock: product.stock,
           };

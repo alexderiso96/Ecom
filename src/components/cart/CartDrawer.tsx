@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import { ProductImage } from '@/components/products/ProductImage';
 import Link from 'next/link';
 import { X, Trash2, Plus, Minus, ShoppingBag, Send, AlertCircle, Sparkles, MessageCircle, Flame, Loader2, Mail, ShieldCheck, Lock } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
@@ -314,7 +314,7 @@ export function CartDrawer() {
                   {/* Thumbnail */}
                   <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                     {item.imageUrl ? (
-                      <Image
+                      <ProductImage
                         src={item.imageUrl}
                         alt={item.name}
                         fill

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import { ProductImage } from '@/components/products/ProductImage';
+import { getProductImageUrls } from '@/lib/product-images';
 import Link from 'next/link';
 import { ShoppingBag, Check, Heart, Flame } from 'lucide-react';
 import { Product } from '@/types/database.types';
@@ -16,6 +17,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem, items } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
+  const [cover] = getProductImageUrls(product);
   const isInCart = items.some((item) => item.productId === product.id);
   const isFavorite = isInWishlist(product.id);
   const isOutOfStock = !product.quote_required && product.stock <= 0;
@@ -34,9 +36,9 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* 1. Immagine d'Impatto Editoriale */}
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F5F2EB] dark:bg-stone-900">
         <Link href={`/product/${product.slug}`} className="block h-full w-full">
-          {product.image_url ? (
-            <Image
-              src={product.image_url}
+          {cover ? (
+            <ProductImage
+              src={cover}
               alt={product.name}
               fill
               className="object-cover object-center filter saturate-[0.98] transition-transform duration-700 ease-out group-hover:scale-105"

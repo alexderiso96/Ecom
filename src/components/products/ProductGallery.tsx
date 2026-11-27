@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
+import { ProductImage } from '@/components/products/ProductImage';
+import { getProductImageUrls } from '@/lib/product-images';
 import { ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product } from '@/types/database.types';
 
@@ -10,21 +11,7 @@ interface ProductGalleryProps {
 }
 
 export function ProductGallery({ product }: ProductGalleryProps) {
-  // Costruisci l'elenco di tutte le immagini della galleria con fallback sicuro su image_url
-  const gallery: string[] = React.useMemo(() => {
-    const list: string[] = [];
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      product.images.forEach((img) => {
-        if (img && typeof img === 'string' && img.trim() && !list.includes(img.trim())) {
-          list.push(img.trim());
-        }
-      });
-    }
-    if (product.image_url && !list.includes(product.image_url.trim())) {
-      list.unshift(product.image_url.trim());
-    }
-    return list;
-  }, [product.images, product.image_url]);
+  const gallery = getProductImageUrls(product);
 
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -45,7 +32,7 @@ export function ProductGallery({ product }: ProductGalleryProps) {
       {/* Main Image Stage */}
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F5F2EB] dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 shadow-luxury group select-none">
         {currentImage ? (
-          <Image
+          <ProductImage
             key={currentImage}
             src={currentImage}
             alt={`${product.name} - Foto ${activeIndex + 1}`}
@@ -120,7 +107,7 @@ export function ProductGallery({ product }: ProductGalleryProps) {
                 }`}
                 title={`Visualizza foto ${idx + 1}`}
               >
-                <Image
+                <ProductImage
                   src={imgUrl}
                   alt={`${product.name} miniatura ${idx + 1}`}
                   fill
