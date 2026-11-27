@@ -25,11 +25,11 @@ before(async () => {
     CREATE FUNCTION storage.extension(text) RETURNS text LANGUAGE sql AS
     $$ SELECT split_part($1, '.', 2) $$;
     GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
   `);
   for (const file of [
     'schema.sql', 'orders_migration.sql', 'add_multiple_images.sql',
-    'security_hardening.sql', 'dream_creation_checkout.sql',
+    'security_hardening.sql', 'dream_creation_checkout.sql', 'checkout_service_permissions.sql',
   ]) {
     const sql = await readFile(new URL(`../supabase/${file}`, import.meta.url), 'utf8');
     await db.exec(sql.replace(/^CREATE EXTENSION .*;$/gm, ''));

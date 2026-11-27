@@ -62,8 +62,13 @@ export async function POST(request: Request) {
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !serviceKey) {
+    return NextResponse.json({ error: 'Checkout temporaneamente non disponibile.' }, { status: 503 });
+  }
+
+  if (serviceKey.startsWith('sb_publishable_')) {
+    console.error('Checkout non disponibile: configurata una chiave pubblicabile');
     return NextResponse.json({ error: 'Checkout temporaneamente non disponibile.' }, { status: 503 });
   }
 
@@ -72,18 +77,36 @@ export async function POST(request: Request) {
     const supabase = createServiceClient(url, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data, error } = await supabase.rpc('create_checkout', {
+    const { data, error, status } = await supabase.rpc('create_checkout', {
       p_key: payload.key, p_user: user?.id ?? null,
       p_customer: payload.customer, p_items: payload.items,
     });
-    if (!error && data?.orderNumber) return NextResponse.json(data);
+    const receipt = Array.isArray(data) && data.length === 1 ? data[0] : data;
+    if (!error && typeof receipt?.orderNumber === 'string' &&
+        typeof receipt.totalPrice === 'number' && Array.isArray(receipt.items)) {
+      return NextResponse.json(receipt);
+    }
     if (error?.code === 'P0001') {
       return NextResponse.json({ error: 'Un articolo o la quantità selezionata non è disponibile. Aggiorna il carrello.' }, { status: 409 });
     }
     if (error?.code === 'P0002') {
       return NextResponse.json({ error: 'Questa richiesta è già associata a un altro ordine.' }, { status: 409 });
     }
-    console.error('Errore registrazione ordine', error?.code);
+    console.error('Errore registrazione ordine', {
+      status,
+      code: error?.code ?? null,
+      failure: error ? 'rpc-error' : 'unexpected-receipt',
+      responseType: data == null ? 'empty' : Array.isArray(data) ? 'array' : typeof data,
+      hasOrderNumber: typeof receipt?.orderNumber === 'string',
+      hasTotalPrice: typeof receipt?.totalPrice === 'number',
+      hasItems: Array.isArray(receipt?.items),
+    });
+    if (error?.code === 'PGRST202' || error?.code === '42501' || status === 401 || status === 403) {
+      return NextResponse.json(
+        { error: 'Checkout temporaneamente non disponibile. Contattaci su WhatsApp.' },
+        { status: 503 },
+      );
+    }
   } catch (error) {
     console.error('Checkout non disponibile', error instanceof Error ? error.name : '');
   }

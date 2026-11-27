@@ -94,8 +94,9 @@ Su un progetto nuovo esegui questi file in ordine dal SQL Editor:
 3. [add_multiple_images.sql](supabase/add_multiple_images.sql)
 4. [security_hardening.sql](supabase/security_hardening.sql)
 5. [dream_creation_checkout.sql](supabase/dream_creation_checkout.sql)
+6. [checkout_service_permissions.sql](supabase/checkout_service_permissions.sql)
 
-Su un progetto esistente con schema, ordini, galleria e hardening già applicati, aggiungi unicamente `dream_creation_checkout.sql`. La migrazione rimuove la scrittura diretta degli ordini per gli utenti pubblici. Coordinane l’applicazione con l’aggiornamento dell’app affinché il nuovo endpoint usi la funzione SQL abilitata per il server.
+Su un progetto esistente con schema, ordini, galleria e hardening già applicati, applica `dream_creation_checkout.sql` e poi `checkout_service_permissions.sql`. Se hai già installato la funzione `create_checkout`, applica solo il secondo script. La migrazione rimuove la scrittura diretta degli ordini per gli utenti pubblici. Coordinane l’applicazione con l’aggiornamento dell’app affinché il nuovo endpoint usi la funzione SQL abilitata per il server.
 
 Per il primo SuperAdmin, registra l’identità tramite il sito e usa lo SQL Editor con il ruolo database `postgres`:
 
