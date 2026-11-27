@@ -58,7 +58,7 @@ export default function RegisterPage() {
             Registrazione completata!
           </h2>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Abbiamo inviato un link di conferma alla tua email (<strong>{email}</strong>). Clicca sul link per attivare il tuo profilo Aura Store.
+            Abbiamo inviato un link di conferma alla tua email (<strong>{email}</strong>). Clicca sul link per attivare il tuo profilo Dream Creation.
           </p>
           <div className="pt-4">
             <Link
@@ -88,7 +88,7 @@ export default function RegisterPage() {
             Crea il tuo Account
           </h1>
           <p className="text-xs text-slate-500">
-            Unisciti ad Aura Store per salvare il tuo profilo e tracciare le tue preferenze.
+            Unisciti ad Dream Creation per salvare il tuo profilo e tracciare le tue preferenze.
           </p>
         </div>
 

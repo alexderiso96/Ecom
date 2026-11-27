@@ -60,11 +60,11 @@ export function ProductCard({ product }: ProductCardProps) {
           }}
           className={`absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
             isFavorite
-              ? 'bg-[#1C1917] text-[#C5A880] shadow-sm'
+              ? 'bg-[#251C19] text-[#B8915D] shadow-sm'
               : 'bg-white/80 dark:bg-stone-900/80 text-stone-500 hover:text-stone-900 dark:hover:text-white backdrop-blur-sm'
           }`}
         >
-          <Heart className={`h-3.5 w-3.5 stroke-[1.5] ${isFavorite ? 'fill-[#C5A880]' : ''}`} />
+          <Heart className={`h-3.5 w-3.5 stroke-[1.5] ${isFavorite ? 'fill-[#B8915D]' : ''}`} />
         </button>
 
         {/* Badges Minimali in alto a sinistra */}
@@ -95,7 +95,7 @@ export function ProductCard({ product }: ProductCardProps) {
           >
             {isInCart ? (
               <>
-                <Check className="h-3.5 w-3.5 text-[#C5A880]" />
+                <Check className="h-3.5 w-3.5 text-[#B8915D]" />
                 <span>Nel Carrello</span>
               </>
             ) : isOutOfStock ? (
@@ -115,14 +115,14 @@ export function ProductCard({ product }: ProductCardProps) {
         <div>
           {/* Categoria */}
           {product.category?.name && (
-            <span className="text-[9px] tracking-[0.22em] uppercase text-[#C5A880] font-medium block mb-1">
+            <span className="text-[9px] tracking-[0.22em] uppercase text-[#B8915D] font-medium block mb-1">
               {product.category.name}
             </span>
           )}
 
           {/* Nome Prodotto */}
           <Link href={`/product/${product.slug}`} className="block group/title">
-            <h3 className="text-xs sm:text-sm font-normal tracking-wide text-stone-900 dark:text-stone-100 line-clamp-1 group-hover/title:text-[#C5A880] transition-colors">
+            <h3 className="text-xs sm:text-sm font-normal tracking-wide text-stone-900 dark:text-stone-100 line-clamp-1 group-hover/title:text-[#B8915D] transition-colors">
               {product.name}
             </h3>
           </Link>

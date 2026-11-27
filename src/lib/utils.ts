@@ -70,7 +70,7 @@ export function buildWhatsAppCheckoutUrl(data: WhatsAppOrderData): string {
     minute: '2-digit',
   });
 
-  let message = `🏛️ *AURA ATELIER — NUOVO ORDINE*\n`;
+  let message = `🏛️ *DREAM CREATION — NUOVO ORDINE*\n`;
   if (data.orderNumber) {
     message += `🛡️ *CODICE DI VERIFICA:* ${data.orderNumber}\n`;
     message += `🔒 *Stato Portale:* Registrato nel gestionale boutique\n`;

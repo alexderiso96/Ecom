@@ -143,6 +143,7 @@ export function CatalogClient({
               catSlug.includes('pelletteria') ||
               catName.includes('bors') ||
               prodName.includes('borsa') ||
+              prodName.includes('pochette') ||
               prodName.includes('zaino') ||
               prodName.includes('tote') ||
               prodName.includes('clutch') ||
@@ -161,6 +162,9 @@ export function CatalogClient({
               prodName.includes('titanio') ||
               prodName.includes('occhiali');
             if (!isAccessory) return false;
+          } else if (target === 'ombrelli' || target === 'tazze') {
+            const categoryRoot = target === 'ombrelli' ? 'ombrell' : 'tazz';
+            if (![catSlug, catName, prodName].some((value) => value.includes(categoryRoot))) return false;
           } else if (catSlug.includes(target) || catName.includes(target)) {
             // Match parziale
           } else {
@@ -198,8 +202,10 @@ export function CatalogClient({
   const activeCategoryLabel = useMemo(() => {
     if (!selectedCategory) return null;
     const catMap: Record<string, string> = {
-      gioielli: 'Gioielli & Bijoux',
-      borse: 'Borse & Pelletteria',
+      gioielli: 'Bijoux',
+      borse: 'Borse e pochette',
+      ombrelli: 'Ombrelli',
+      tazze: 'Tazze',
       accessori: 'Accessori di Stile',
     };
     return catMap[selectedCategory.toLowerCase()] || categories.find((c) => c.slug === selectedCategory)?.name || selectedCategory;
@@ -214,8 +220,8 @@ export function CatalogClient({
     <div className="container py-12 md:py-16">
       {/* Header Editoriale */}
       <div className="mb-10 text-left border-b border-stone-200/80 dark:border-stone-800/80 pb-6">
-        <span className="text-[10px] tracking-[0.24em] font-semibold text-[#C5A880] uppercase block mb-2">
-          ✦ Aura Atelier • Catalogo
+        <span className="text-[10px] tracking-[0.24em] font-semibold text-[#B8915D] uppercase block mb-2">
+          Dream Creation
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal text-stone-900 dark:text-stone-50 tracking-tight">
           {activeCategoryLabel && activeDepartmentLabel
@@ -223,7 +229,7 @@ export function CatalogClient({
             : activeCategoryLabel || activeDepartmentLabel || 'Le Nostre Creazioni'}
         </h1>
         <p className="text-xs sm:text-sm font-light text-stone-500 dark:text-stone-400 mt-2 max-w-xl leading-relaxed">
-          Pezzi esclusivi rifiniti con metalli nobili e pellami di pregio. Seleziona il reparto o la categoria per affinare la ricerca e ordina direttamente su WhatsApp con il nostro staff.
+          Scopri bijoux e accessori. Scrivici su WhatsApp per personalizzazioni, costi e spedizione.
         </p>
       </div>
 
@@ -287,7 +293,7 @@ export function CatalogClient({
                 setSearchQuery('');
                 router.push('/catalog', { scroll: false });
               }}
-              className="text-[10px] font-sans font-medium text-[#C5A880] hover:underline ml-2"
+              className="text-[10px] font-sans font-medium text-[#B8915D] hover:underline ml-2"
             >
               Azzera tutti i filtri
             </button>

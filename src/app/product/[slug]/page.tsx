@@ -28,8 +28,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
   if (!product) return { title: 'Creazione non trovata' };
 
   return {
-    title: `${product.name} | AURA ATELIER`,
-    description: product.description || 'Scopri i dettagli di questa creazione esclusiva su Aura Atelier.',
+    title: `${product.name} | DREAM CREATION`,
+    description: product.description || 'Scopri i dettagli di questa creazione esclusiva su Dream Creation.',
   };
 }
 
@@ -69,8 +69,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <div className="lg:col-span-6 space-y-6 text-left">
           <div>
             <div className="flex items-center justify-between gap-4 mb-2">
-              <span className="text-[10px] tracking-[0.24em] uppercase font-semibold text-[#C5A880]">
-                {product.category?.name || 'Aura Atelier'}
+              <span className="text-[10px] tracking-[0.24em] uppercase font-semibold text-[#B8915D]">
+                {product.category?.name || 'Dream Creation'}
               </span>
 
               {isOutOfStock ? (
@@ -109,7 +109,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               Descrizione & Dettagli
             </h3>
             <p className="text-xs sm:text-sm font-light text-stone-600 dark:text-stone-300 leading-relaxed">
-              {product.description || 'Ogni creazione Aura viene realizzata con una cura meticolosa per le proporzioni e le finiture, offrendo un equilibrio impeccabile tra estetica raffinata e praticità d\'uso quotidiano.'}
+              {product.description || 'Scrivici per conoscere i dettagli di questo articolo e le opzioni di personalizzazione.'}
             </p>
           </div>
 
@@ -119,15 +119,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Value Propositions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-stone-200/80 dark:border-stone-800/80 text-[10px] tracking-[0.12em] uppercase text-stone-500">
             <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-[#C5A880] stroke-[1.4]" />
+              <Truck className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
               <span>Consegna 24/48h</span>
             </div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[#C5A880] stroke-[1.4]" />
+              <ShieldCheck className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
               <span>Garanzia Autenticità</span>
             </div>
             <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-[#C5A880] stroke-[1.4]" />
+              <RefreshCw className="h-4 w-4 text-[#B8915D] stroke-[1.4]" />
               <span>Reso entro 14gg</span>
             </div>
           </div>

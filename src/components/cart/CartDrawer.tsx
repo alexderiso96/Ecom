@@ -256,13 +256,13 @@ export function CartDrawer() {
                       Ordine Inviato su WhatsApp
                     </h3>
                     <p className="text-xs text-stone-500 max-w-xs mt-2 mx-auto leading-relaxed">
-                      La conversazione con il Concierge è stata aperta con il riepilogo sicuro. Il carrello è stato svuotato.
+                      La conversazione con Dream Creation è stata aperta con il riepilogo sicuro. Il carrello è stato svuotato.
                     </p>
                   </div>
 
                   <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/80 dark:bg-stone-900/60 dark:border-stone-800 text-center w-full max-w-xs">
                     <span className="block text-[10px] uppercase font-bold tracking-wider text-stone-400 mb-1">
-                      Codice Verifica Atelier
+                      Codice ordine
                     </span>
                     <span className="font-mono text-sm font-black text-stone-900 dark:text-stone-100 tracking-wider">
                       #{lastCreatedOrder}
@@ -288,7 +288,7 @@ export function CartDrawer() {
                     Il tuo carrello è vuoto
                   </h3>
                   <p className="text-xs text-slate-500 max-w-xs mt-1 mb-6">
-                    Esplora il catalogo di Aura Store e seleziona i tuoi prodotti esclusivi.
+                    Esplora il catalogo di Dream Creation e aggiungi i tuoi articoli preferiti.
                   </p>
                   <button
                     onClick={closeCart}

@@ -68,7 +68,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             onClick={handleNotifyWhatsApp}
             className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white hover:bg-stone-800 text-xs tracking-[0.16em] uppercase font-medium transition-all"
           >
-            <Bell className="h-3.5 w-3.5 text-[#C5A880]" />
+            <Bell className="h-3.5 w-3.5 text-[#B8915D]" />
             <span>Avvisami su WhatsApp al Rientro</span>
           </button>
         </div>
@@ -111,11 +111,11 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
               onClick={() => toggleItem(product)}
               className={`inline-flex items-center gap-2 px-3.5 py-2 border text-xs tracking-[0.14em] uppercase transition-all duration-200 ${
                 isFavorite
-                  ? 'border-[#1C1917] bg-[#1C1917] text-[#C5A880] dark:border-stone-100 dark:bg-stone-100 dark:text-stone-950'
+                  ? 'border-[#251C19] bg-[#251C19] text-[#B8915D] dark:border-stone-100 dark:bg-stone-100 dark:text-stone-950'
                   : 'border-stone-300 text-stone-600 hover:border-stone-900 hover:text-stone-900 dark:border-stone-700 dark:text-stone-300 dark:hover:border-stone-100'
               }`}
             >
-              <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-[#C5A880]' : ''}`} />
+              <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-[#B8915D]' : ''}`} />
               <span className="text-[10px] font-medium">{isFavorite ? 'Nei Preferiti' : 'Salva nei Preferiti'}</span>
             </button>
           </div>
@@ -133,7 +133,7 @@ export function ProductDetailActions({ product }: ProductDetailActionsProps) {
             >
               {added ? (
                 <>
-                  <Check className="h-4 w-4 text-[#C5A880]" />
+                  <Check className="h-4 w-4 text-[#B8915D]" />
                   <span>Aggiunto al Carrello</span>
                 </>
               ) : (

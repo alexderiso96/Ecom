@@ -27,21 +27,33 @@ interface VisualCategoryCard {
 const VISUAL_CATEGORIES: VisualCategoryCard[] = [
   {
     label: 'Tutte le Creazioni',
-    subtitle: 'L\'intero Atelier',
+    subtitle: 'Catalogo completo',
     slug: null,
     image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80',
   },
   {
-    label: 'Gioielli & Bijoux',
-    subtitle: 'Anelli, Collane, Oro 18k',
+    label: 'Bijoux',
+    subtitle: 'Orecchini, collane e bracciali',
     slug: 'gioielli',
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=85',
+    image: '/dream-creation/bijoux.jpg',
   },
   {
-    label: 'Borse & Pelletteria',
-    subtitle: 'Tote, Tracolle, Cuoio',
+    label: 'Borse e pochette',
+    subtitle: 'Borse, pochette e tracolle',
     slug: 'borse',
-    image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=85',
+    image: '/dream-creation/ricami.jpg',
+  },
+  {
+    label: 'Ombrelli',
+    subtitle: 'Iniziali ricamate',
+    slug: 'ombrelli',
+    image: '/dream-creation/ombrelli.jpg',
+  },
+  {
+    label: 'Tazze',
+    subtitle: 'Idee da personalizzare',
+    slug: 'tazze',
+    image: '/dream-creation/tazze.jpg',
   },
   {
     label: 'Accessori di Stile',
@@ -65,7 +77,7 @@ export function ProductFilters({
   // Categorie custom da Supabase che non rientrano nelle 3 macro-categorie
   const customCategories = categories.filter((c) => {
     const s = c.slug.toLowerCase();
-    return !['gioielli', 'borse', 'accessori', 'donna', 'uomo'].includes(s);
+    return !['gioielli', 'borse', 'ombrelli', 'tazze', 'accessori', 'donna', 'uomo'].includes(s);
   });
 
   return (
@@ -126,7 +138,7 @@ export function ProductFilters({
               placeholder="Cerca pezzo o materiale..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-9 pr-7 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-xs text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:focus:border-[#C5A880] transition-colors"
+              className="w-full pl-9 pr-7 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-xs text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:focus:border-[#B8915D] transition-colors"
             />
             {searchQuery && (
               <button
@@ -150,7 +162,7 @@ export function ProductFilters({
               <select
                 value={sortBy}
                 onChange={(e) => onSortChange(e.target.value)}
-                className="pl-7 pr-6 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-[10px] tracking-[0.1em] font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:border-stone-900 dark:focus:border-[#C5A880] cursor-pointer transition-colors"
+                className="pl-7 pr-6 py-1.5 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-[10px] tracking-[0.1em] font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:border-stone-900 dark:focus:border-[#B8915D] cursor-pointer transition-colors"
               >
                 <option value="featured">In Evidenza</option>
                 <option value="newest">Nuovi Arrivi</option>
@@ -173,7 +185,7 @@ export function ProductFilters({
             <button
               type="button"
               onClick={() => onSelectCategory(null)}
-              className="text-[10px] tracking-[0.14em] uppercase text-[#C5A880] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[10px] tracking-[0.14em] uppercase text-[#B8915D] hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Mostra tutte</span>
               <X className="h-3 w-3" />
@@ -181,7 +193,7 @@ export function ProductFilters({
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {VISUAL_CATEGORIES.map((card) => {
             const isSelected = selectedCategory === card.slug;
             return (
@@ -191,7 +203,7 @@ export function ProductFilters({
                 onClick={() => onSelectCategory(isSelected ? null : card.slug)}
                 className={`group relative overflow-hidden h-24 sm:h-28 text-left p-3.5 flex flex-col justify-end border transition-all duration-300 cursor-pointer ${
                   isSelected
-                    ? 'border-[#C5A880] ring-2 ring-[#C5A880]/30 shadow-luxury'
+                    ? 'border-[#B8915D] ring-2 ring-[#B8915D]/30 shadow-luxury'
                     : 'border-stone-200/80 dark:border-stone-800 hover:border-stone-400 dark:hover:border-stone-600'
                 }`}
               >
@@ -218,10 +230,10 @@ export function ProductFilters({
                       {card.label}
                     </h3>
                     {isSelected && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#C5A880]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#B8915D]" />
                     )}
                   </div>
-                  <p className="text-[9px] text-[#EFE6D8] font-light tracking-wide mt-0.5 line-clamp-1">
+                  <p className="text-[9px] text-[#F1E8DC] font-light tracking-wide mt-0.5 line-clamp-1">
                     {card.subtitle}
                   </p>
                 </div>
@@ -245,7 +257,7 @@ export function ProductFilters({
                   onClick={() => onSelectCategory(isSelected ? null : cat.slug)}
                   className={`flex-shrink-0 px-3 py-1 text-[10px] tracking-[0.14em] uppercase border transition-all ${
                     isSelected
-                      ? 'border-[#C5A880] bg-[#C5A880] text-stone-950 font-semibold'
+                      ? 'border-[#B8915D] bg-[#B8915D] text-stone-950 font-semibold'
                       : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:border-stone-900'
                   }`}
                 >

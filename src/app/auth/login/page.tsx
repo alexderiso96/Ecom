@@ -131,7 +131,7 @@ function LoginForm() {
             <Sparkles className="h-5 w-5 text-indigo-400 dark:text-indigo-600" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Accedi ad Aura Store
+            Accedi ad Dream Creation
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
             Inserisci le tue credenziali per accedere al carrello o al pannello di gestione.

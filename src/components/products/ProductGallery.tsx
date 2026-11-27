@@ -115,7 +115,7 @@ export function ProductGallery({ product }: ProductGalleryProps) {
                 onClick={() => setActiveIndex(idx)}
                 className={`relative h-20 w-16 sm:h-24 sm:w-20 flex-shrink-0 overflow-hidden rounded-xs border transition-all ${
                   isSelected
-                    ? 'border-[#C5A880] ring-2 ring-[#C5A880]/30 opacity-100 scale-102 shadow-sm'
+                    ? 'border-[#B8915D] ring-2 ring-[#B8915D]/30 opacity-100 scale-102 shadow-sm'
                     : 'border-stone-200/80 dark:border-stone-800 opacity-60 hover:opacity-100'
                 }`}
                 title={`Visualizza foto ${idx + 1}`}

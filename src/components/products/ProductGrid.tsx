@@ -15,7 +15,7 @@ export function ProductGrid({
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center border border-stone-200/80 bg-white/60 dark:border-stone-800 dark:bg-stone-900/40 p-16 text-center my-10 max-w-xl mx-auto">
-        <Sparkles className="h-6 w-6 text-[#C5A880] stroke-[1.2] mb-3" />
+        <Sparkles className="h-6 w-6 text-[#B8915D] stroke-[1.2] mb-3" />
         <h3 className="font-serif text-lg font-normal text-stone-900 dark:text-stone-100">
           Nessuna Creazione Trovata
         </h3>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { Brand } from './Brand';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingBag,
@@ -28,10 +29,11 @@ interface BoutiqueNavItem {
 
 // Categorie merceologiche reali (Donna e Uomo sono gestiti separatamente come Reparti)
 const boutiqueCategories: BoutiqueNavItem[] = [
-  { label: 'Gioielli', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
-  { label: 'Borse', href: '/catalog?category=borse', categorySlug: 'borse' },
-  { label: 'Accessori', href: '/catalog?category=accessori', categorySlug: 'accessori' },
-  { label: 'Tutto il Catalogo', href: '/catalog', categorySlug: null },
+  { label: 'Bijoux', href: '/catalog?category=gioielli', categorySlug: 'gioielli' },
+  { label: 'Pochette', href: '/catalog?category=borse', categorySlug: 'borse' },
+  { label: 'Ombrelli', href: '/catalog?category=ombrelli', categorySlug: 'ombrelli' },
+  { label: 'Tazze', href: '/catalog?category=tazze', categorySlug: 'tazze' },
+  { label: 'Catalogo', href: '/catalog', categorySlug: null },
 ];
 
 function NavbarInner() {
@@ -133,25 +135,25 @@ function NavbarInner() {
   return (
     <>
       {/* 1. Top Ribbon - Minimalist Luxury */}
-      <div className="bg-[#1C1917] text-[#E7E5E4] text-[10px] tracking-[0.22em] font-medium py-2 px-4 text-center uppercase border-b border-stone-800/80 flex items-center justify-between sm:justify-center relative">
-        <span className="hidden sm:inline-block text-[#C5A880] mr-2">✦</span>
-        <span>Spedizione Assicurata 24/48h • Assistenza Personale su WhatsApp</span>
-        <span className="hidden sm:inline-block text-[#C5A880] ml-2">✦</span>
+      <div className="bg-[#251C19] text-[#E7E5E4] text-[10px] tracking-[0.22em] font-medium py-2 px-4 text-center uppercase border-b border-stone-800/80 flex items-center justify-between sm:justify-center relative">
+        <span className="hidden sm:inline-block text-[#B8915D] mr-2">✦</span>
+        <span>Personalizzazioni, costi e spedizione su WhatsApp</span>
+        <span className="hidden sm:inline-block text-[#B8915D] ml-2">✦</span>
 
         <a
-          href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Salve, vorrei una consulenza sui vostri gioielli e accessori.')}`}
+          href={`https://wa.me/${adminPhone}?text=${encodeURIComponent('Ciao! Vorrei informazioni su una personalizzazione.')}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex sm:absolute sm:right-6 items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-[#C5A880] hover:text-[#EFE6D8] transition-colors"
+          className="inline-flex sm:absolute sm:right-6 items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-[#B8915D] hover:text-[#F1E8DC] transition-colors"
         >
           <MessageCircle className="h-3 w-3" />
-          <span className="hidden md:inline">Concierge</span>
+          <span className="hidden md:inline">Contatti</span>
         </a>
       </div>
 
       {/* 2. Main Luxury Boutique Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-stone-200/70 bg-[#FDFBF7]/90 backdrop-blur-xl dark:border-stone-800/70 dark:bg-[#100F0E]/90 transition-all">
-        <div className="container relative flex h-20 items-center justify-between">
+      <header className="sticky top-0 z-40 w-full border-b border-stone-200/70 bg-[#FAF5EE]/90 backdrop-blur-xl dark:border-stone-800/70 dark:bg-[#181311]/90 transition-all">
+        <div className="container relative flex h-16 items-center justify-between">
           
           {/* LEFT: Department Selector (Donna/Uomo) + Actual Product Categories */}
           <div className="flex items-center gap-5 flex-1">
@@ -163,39 +165,7 @@ function NavbarInner() {
               {mobileMenuOpen ? <X className="h-5 w-5 stroke-[1.4]" /> : <Menu className="h-5 w-5 stroke-[1.4]" />}
             </button>
 
-            {/* Department (Donna / Uomo) separato dalle categorie */}
-            <div className="hidden lg:flex items-center gap-1 border-r border-stone-200 dark:border-stone-800 pr-4">
-              <Link
-                href="/catalog?department=donna"
-                className={`text-[11px] tracking-[0.2em] uppercase font-semibold py-1 transition-colors relative ${
-                  pathname === '/catalog' && currentDepartment === 'donna'
-                    ? 'text-stone-950 dark:text-white font-bold'
-                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100'
-                }`}
-              >
-                <span>Donna</span>
-                {pathname === '/catalog' && currentDepartment === 'donna' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
-                )}
-              </Link>
-              <span className="text-stone-300 dark:text-stone-700 text-[10px] mx-1">/</span>
-              <Link
-                href="/catalog?department=uomo"
-                className={`text-[11px] tracking-[0.2em] uppercase font-semibold py-1 transition-colors relative ${
-                  pathname === '/catalog' && currentDepartment === 'uomo'
-                    ? 'text-stone-950 dark:text-white font-bold'
-                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100'
-                }`}
-              >
-                <span>Uomo</span>
-                {pathname === '/catalog' && currentDepartment === 'uomo' && (
-                  <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
-                )}
-              </Link>
-            </div>
-
-            {/* Categorie Prodotto Reali: Gioielli, Borse, Accessori, Tutto */}
-            <nav className="hidden lg:flex items-center gap-5">
+            <nav className="hidden lg:flex items-center gap-4">
               {boutiqueCategories.map((item) => {
                 const isActive =
                   item.categorySlug !== undefined
@@ -214,7 +184,7 @@ function NavbarInner() {
                   >
                     {item.label}
                     {isActive && (
-                      <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#C5A880]" />
+                      <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-[#B8915D]" />
                     )}
                   </Link>
                 );
@@ -224,14 +194,7 @@ function NavbarInner() {
 
           {/* CENTER: Centered Logo Boutique */}
           <div className="flex-shrink-0 text-center">
-            <Link href="/" className="inline-flex flex-col items-center group">
-              <span className="font-serif text-2xl sm:text-3xl tracking-[0.32em] font-normal uppercase text-stone-900 dark:text-stone-100 group-hover:opacity-80 transition-opacity">
-                AURA
-              </span>
-              <span className="text-[7.5px] tracking-[0.38em] text-[#C5A880] font-sans uppercase -mt-0.5 font-medium">
-                ATELIER
-              </span>
-            </Link>
+            <Brand />
           </div>
 
           {/* RIGHT: Search, Wishlist, Cart & Profile */}
@@ -257,9 +220,9 @@ function NavbarInner() {
               aria-label="Lista Desideri"
               title="I tuoi Preferiti"
             >
-              <Heart className={`h-4 w-4 stroke-[1.4] ${mounted && totalWishlistItems > 0 ? 'fill-[#C5A880] text-[#C5A880]' : ''}`} />
+              <Heart className={`h-4 w-4 stroke-[1.4] ${mounted && totalWishlistItems > 0 ? 'fill-[#B8915D] text-[#B8915D]' : ''}`} />
               {mounted && totalWishlistItems > 0 && (
-                <span className="absolute top-1 right-1 flex h-3.5 min-w-3.5 px-0.5 items-center justify-center rounded-full bg-[#1C1917] text-[8px] font-bold text-white dark:bg-stone-100 dark:text-stone-950">
+                <span className="absolute top-1 right-1 flex h-3.5 min-w-3.5 px-0.5 items-center justify-center rounded-full bg-[#251C19] text-[8px] font-bold text-white dark:bg-stone-100 dark:text-stone-950">
                   {totalWishlistItems}
                 </span>
               )}
@@ -273,7 +236,7 @@ function NavbarInner() {
             >
               <ShoppingBag className="h-4 w-4 stroke-[1.4]" />
               {mounted && totalItems > 0 ? (
-                <span className="flex h-3.5 min-w-3.5 px-1 items-center justify-center rounded-full bg-[#C5A880] text-[8px] font-bold text-stone-950">
+                <span className="flex h-3.5 min-w-3.5 px-1 items-center justify-center rounded-full bg-[#B8915D] text-[8px] font-bold text-stone-950">
                   {totalItems}
                 </span>
               ) : null}
@@ -317,7 +280,7 @@ function NavbarInner() {
                 {/* Dropdown Menu */}
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full pt-2 w-56 z-50 animate-fade-in">
-                    <div className="rounded-xs bg-[#FDFBF7] dark:bg-[#151413] p-3 shadow-luxury border border-stone-200 dark:border-stone-800 divide-y divide-stone-100 dark:divide-stone-800 text-left">
+                    <div className="rounded-xs bg-[#FAF5EE] dark:bg-[#151413] p-3 shadow-luxury border border-stone-200 dark:border-stone-800 divide-y divide-stone-100 dark:divide-stone-800 text-left">
                       <div className="pb-2.5">
                         <p className="text-xs font-serif font-bold text-stone-900 dark:text-stone-100 truncate">
                           {userProfile.full_name || 'Gentile Cliente'}
@@ -337,7 +300,7 @@ function NavbarInner() {
                             onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-2 px-2 py-1.5 text-xs text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white transition-colors"
                           >
-                            <Shield className="h-3.5 w-3.5 text-[#C5A880]" />
+                            <Shield className="h-3.5 w-3.5 text-[#B8915D]" />
                             <span>Pannello Admin</span>
                           </Link>
                         )}
@@ -398,14 +361,14 @@ function NavbarInner() {
           <div className="border-t border-stone-200/80 bg-[#FAF8F5]/98 dark:border-stone-800 dark:bg-[#121110]/98 px-4 py-4 animate-fade-in shadow-subtle">
             <div className="container max-w-2xl mx-auto">
               <form onSubmit={handleSearch} className="relative flex items-center">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C5A880]" />
+                <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-[#B8915D]" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="Cerca gioielli, borse, accessori o codici..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-10 py-2.5 bg-transparent border-b border-stone-300 dark:border-stone-700 text-sm font-light text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:text-stone-100 dark:focus:border-[#C5A880] transition-colors"
+                  className="w-full pl-8 pr-10 py-2.5 bg-transparent border-b border-stone-300 dark:border-stone-700 text-sm font-light text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 dark:text-stone-100 dark:focus:border-[#B8915D] transition-colors"
                 />
                 <button
                   type="button"
@@ -421,7 +384,7 @@ function NavbarInner() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-stone-200/80 bg-[#FDFBF7] dark:border-stone-800 dark:bg-[#100F0E] p-6 space-y-4 animate-fade-in shadow-xl">
+          <div className="lg:hidden border-t border-stone-200/80 bg-[#FAF5EE] dark:border-stone-800 dark:bg-[#181311] p-6 space-y-4 animate-fade-in shadow-xl">
             {/* Reparti Donna / Uomo */}
             <div className="pb-3 border-b border-stone-200 dark:border-stone-800 flex items-center gap-3">
               <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">Reparto:</span>
@@ -430,7 +393,7 @@ function NavbarInner() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-xs tracking-[0.16em] uppercase px-3 py-1 border transition-all ${
                   currentDepartment === 'donna'
-                    ? 'border-[#C5A880] bg-[#C5A880] text-stone-950 font-semibold'
+                    ? 'border-[#B8915D] bg-[#B8915D] text-stone-950 font-semibold'
                     : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
                 }`}
               >
@@ -441,7 +404,7 @@ function NavbarInner() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`text-xs tracking-[0.16em] uppercase px-3 py-1 border transition-all ${
                   currentDepartment === 'uomo'
-                    ? 'border-[#C5A880] bg-[#C5A880] text-stone-950 font-semibold'
+                    ? 'border-[#B8915D] bg-[#B8915D] text-stone-950 font-semibold'
                     : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300'
                 }`}
               >
@@ -459,7 +422,7 @@ function NavbarInner() {
                   key={item.label}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#C5A880] dark:text-stone-200 py-1 transition-colors"
+                  className="block text-sm font-serif tracking-[0.12em] uppercase text-stone-800 hover:text-[#B8915D] dark:text-stone-200 py-1 transition-colors"
                 >
                   {item.label}
                 </Link>
@@ -473,7 +436,7 @@ function NavbarInner() {
                 className="flex items-center justify-between text-xs tracking-[0.15em] uppercase text-stone-600 dark:text-stone-400 py-1"
               >
                 <span>Lista dei Desideri</span>
-                <span className="font-bold text-[#C5A880]">{totalWishlistItems}</span>
+                <span className="font-bold text-[#B8915D]">{totalWishlistItems}</span>
               </Link>
               
               <a
@@ -505,7 +468,7 @@ function NavbarInner() {
 
 export function Navbar() {
   return (
-    <Suspense fallback={<div className="h-20 bg-[#FDFBF7] dark:bg-[#100F0E] border-b border-stone-200/70" />}>
+    <Suspense fallback={<div className="h-20 bg-[#FAF5EE] dark:bg-[#181311] border-b border-stone-200/70" />}>
       <NavbarInner />
     </Suspense>
   );

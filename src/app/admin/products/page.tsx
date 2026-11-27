@@ -593,7 +593,7 @@ export default function AdminProductsPage() {
                       key={`${imgUrl}-${idx}`}
                       className={`relative aspect-[4/5] rounded-xl overflow-hidden border group bg-stone-100 shadow-2xs transition-all ${
                         isCover
-                          ? 'border-[#C5A880] ring-2 ring-[#C5A880]/40'
+                          ? 'border-[#B8915D] ring-2 ring-[#B8915D]/40'
                           : 'border-stone-200 dark:border-stone-800 hover:border-stone-400'
                       }`}
                     >
@@ -608,7 +608,7 @@ export default function AdminProductsPage() {
                       {/* Badge Copertina */}
                       {isCover && (
                         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-900/90 text-white text-[9px] font-bold tracking-wider uppercase backdrop-blur-xs shadow-sm z-10">
-                          <Star className="h-2.5 w-2.5 fill-[#C5A880] text-[#C5A880]" />
+                          <Star className="h-2.5 w-2.5 fill-[#B8915D] text-[#B8915D]" />
                           <span>Copertina</span>
                         </div>
                       )}
