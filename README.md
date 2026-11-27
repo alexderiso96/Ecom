@@ -106,7 +106,7 @@ SET role = 'superadmin'
 WHERE id = 'uuid-dell-utente';
 ```
 
-La migrazione crea le categorie Ombrelli, Pochette, Tazze e Bijoux se mancano. Dal pannello prodotti, assegna gli articoli esistenti alla categoria appropriata e compila le opzioni di personalizzazione. Gli articoli contrassegnati **Richiede un preventivo su WhatsApp** mostrano un pulsante di contatto al posto dell’acquisto. La home mostra le collezioni che contengono articoli attivi. Il bucket `products-images` ospita le foto caricate dal pannello.
+La migrazione crea le categorie Ombrelli, Pochette, Tazze e Bijoux se mancano. Dal pannello prodotti, assegna gli articoli esistenti alla categoria appropriata e compila le opzioni di personalizzazione. Gli articoli contrassegnati **Richiede un preventivo su WhatsApp** mostrano un pulsante di contatto al posto dell’acquisto. La home mostra le collezioni che contengono articoli attivi. Puoi configurare [Cloudinary per gli upload del pannello](EXTERNAL_IMAGE_STORAGE_GUIDE.md). In assenza di Cloudinary si usa il bucket Supabase `products-images`.
 
 ### Ambiente
 

@@ -8,10 +8,10 @@ import { Hero } from '@/components/home/Hero';
 import { ProductGrid } from '@/components/products/ProductGrid';
 
 const collections = [
-  { name: 'Ombrelli', slug: 'ombrelli', image: 'ombrelli.jpg' },
-  { name: 'Pochette', slug: 'pochette', image: 'ricami.jpg' },
-  { name: 'Bijoux', slug: 'gioielli', image: 'bijoux.jpg' },
-  { name: 'Tazze', slug: 'tazze', image: 'tazze.jpg' },
+  { name: 'Ombrelli', slug: 'ombrelli', image: 'demo/ombrello.jpg' },
+  { name: 'Pochette', slug: 'pochette', image: 'demo/pochette.jpg' },
+  { name: 'Bijoux', slug: 'gioielli', image: 'demo/orecchini.jpg' },
+  { name: 'Tazze', slug: 'tazze', image: 'demo/tazza.jpg' },
 ];
 
 export const dynamic = 'force-dynamic';

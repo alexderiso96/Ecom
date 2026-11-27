@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { SeedButton } from '@/components/admin/SeedButton';
 import { validateProductInput, validateImageFile } from '@/lib/validation';
+import type { ImageUploadTarget } from '@/lib/cloudinary';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -109,71 +110,64 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Upload su Supabase Storage bucket 'products-images' con supporto caricamento multiplo
-  const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
-    if (!fileList || fileList.length === 0) return;
+  const handleMultipleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []);
+    if (!files.length) return;
+    input.value = '';
 
-    const files = Array.from(fileList);
-
-    // 1. Validazione di ciascun file
     for (const file of files) {
-      const fileValidation = validateImageFile(file);
-      if (!fileValidation.valid) {
-        setErrorMsg(fileValidation.error || 'Uno o più file non sono validi.');
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setErrorMsg(validation.error || 'Uno o più file non sono validi.');
         return;
       }
     }
 
     setUploadingFile(true);
     setErrorMsg(null);
+    const uploadedUrls: string[] = [];
+    let failedFile = '';
 
     try {
       const supabase = createClient();
-      const uploadedUrls: string[] = [];
+      const bucket = supabase.storage.from('products-images');
 
       for (const file of files) {
-        const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
-        // Sanitizzazione nome file: solo timestamp numerico e token alfanumerico casuale
-        const safeRandomToken = Math.random().toString(36).substring(2, 10);
-        const fileName = `${Date.now()}-${safeRandomToken}.${fileExt}`;
-        const filePath = `products/${fileName}`;
+        failedFile = file.name;
+        const authorization = await fetch('/api/admin/media/sign', { method: 'POST' });
+        const target = await authorization.json() as ImageUploadTarget | { error: string };
+        if ('error' in target) throw new Error(target.error);
+        if (!authorization.ok) throw new Error('Autorizzazione al caricamento non disponibile.');
 
-        const { error: uploadError } = await supabase.storage
-          .from('products-images')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false,
-          });
+        if (target.provider === 'cloudinary') {
+          const form = new FormData();
+          Object.entries(target.fields).forEach(([key, value]) => form.append(key, value));
+          form.append('file', file);
 
-        if (uploadError) throw uploadError;
-
-        // Recupera URL pubblico
-        const { data: publicUrlData } = supabase.storage
-          .from('products-images')
-          .getPublicUrl(filePath);
-
-        if (publicUrlData?.publicUrl) {
-          uploadedUrls.push(publicUrlData.publicUrl);
+          const response = await fetch(target.endpoint, { method: 'POST', body: form });
+          const result = await response.json();
+          if (!response.ok || typeof result.secure_url !== 'string' || !result.secure_url.startsWith('https://')) {
+            throw new Error('Cloudinary ha rifiutato il caricamento. Verifica le credenziali e le impostazioni del preset.');
+          }
+          uploadedUrls.push(result.secure_url);
+        } else {
+          const extension = file.name.split('.').pop()?.toLowerCase();
+          const path = `products/${crypto.randomUUID()}.${extension}`;
+          const { error } = await bucket.upload(path, file, { cacheControl: '3600', upsert: false });
+          if (error) throw error;
+          uploadedUrls.push(bucket.getPublicUrl(path).data.publicUrl);
         }
       }
-
-      setImages((prev) => {
-        const updated = [...prev, ...uploadedUrls];
-        if (!imageUrl && updated.length > 0) {
-          setImageUrl(updated[0]);
-        }
-        return updated;
-      });
-
-      if (!imageUrl && uploadedUrls.length > 0) {
-        setImageUrl(uploadedUrls[0]);
-      }
-    } catch (err: any) {
-      setErrorMsg(`Errore upload file su Supabase Storage: ${err.message}`);
+    } catch (error) {
+      const detail = error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Errore di caricamento.';
+      setErrorMsg(`Impossibile caricare ${failedFile}: ${detail}${uploadedUrls.length ? ' Le foto già caricate sono nella galleria.' : ''}`);
     } finally {
+      if (uploadedUrls.length) {
+        setImages((previous) => [...previous, ...uploadedUrls]);
+        setImageUrl((previous) => previous || uploadedUrls[0]);
+      }
       setUploadingFile(false);
-      e.target.value = '';
     }
   };
 
@@ -212,6 +206,7 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving || uploadingFile) return;
     setSaving(true);
     setErrorMsg(null);
 
@@ -444,7 +439,7 @@ export default function AdminProductsPage() {
       {/* Modal Add / Edit */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { if (!uploadingFile) setModalOpen(false); }}
         title={editingProduct ? 'Modifica Prodotto' : 'Nuovo Prodotto'}
         className="max-w-2xl"
       >
@@ -571,10 +566,10 @@ export default function AdminProductsPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-stone-900 text-white hover:bg-stone-800 shadow-sm text-xs font-semibold cursor-pointer dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white transition-all flex-shrink-0">
                 <Upload className="h-4 w-4" />
-                {uploadingFile ? 'Caricamento Storage...' : 'Carica Foto dal Dispositivo'}
+                {uploadingFile ? 'Caricamento foto…' : 'Carica Foto dal Dispositivo'}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
                   multiple
                   onChange={handleMultipleFileUpload}
                   className="hidden"
@@ -699,6 +694,7 @@ export default function AdminProductsPage() {
               variant="outline"
               size="sm"
               onClick={() => setModalOpen(false)}
+              disabled={uploadingFile}
             >
               Annulla
             </Button>
