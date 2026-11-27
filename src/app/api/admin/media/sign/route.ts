@@ -19,20 +19,28 @@ export async function POST() {
     .maybeSingle();
 
   if (profileError) {
-    return NextResponse.json({ error: 'Verifica dei permessi temporaneamente non disponibile.' }, { status: 503 });
+    console.error('Ruolo upload immagini non verificabile', { code: profileError.code });
+    return NextResponse.json({
+      code: 'MEDIA_PROFILE_LOOKUP_FAILED',
+      error: 'Supabase non ha potuto verificare il ruolo per il caricamento delle immagini.',
+    }, { status: 503 });
   }
   if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Caricamento riservato agli amministratori.' }, { status: 403 });
   }
 
+  let config: ReturnType<typeof getCloudinaryConfig>;
   try {
-    const config = getCloudinaryConfig(process.env);
-    const target: ImageUploadTarget = config
-      ? signProductImageUpload(config, randomUUID(), Math.floor(Date.now() / 1000))
-      : { provider: 'supabase' };
-
-    return NextResponse.json(target, { headers: { 'Cache-Control': 'no-store' } });
-  } catch {
-    return NextResponse.json({ error: 'Configurazione Cloudinary incompleta o non valida.' }, { status: 503 });
+    config = getCloudinaryConfig(process.env);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Configurazione Cloudinary non valida.';
+    console.error('Configurazione upload immagini non valida', { message });
+    return NextResponse.json({ code: 'MEDIA_CLOUDINARY_CONFIG', error: message }, { status: 503 });
   }
+
+  const target: ImageUploadTarget = config
+    ? signProductImageUpload(config, randomUUID(), Math.floor(Date.now() / 1000))
+    : { provider: 'supabase' };
+
+  return NextResponse.json(target, { headers: { 'Cache-Control': 'no-store' } });
 }

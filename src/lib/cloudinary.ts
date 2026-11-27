@@ -22,8 +22,16 @@ export function getCloudinaryConfig(env: Record<string, string | undefined>): Cl
   const uploadPreset = env.CLOUDINARY_UPLOAD_PRESET?.trim() || undefined;
 
   if (!cloudName && !apiKey && !apiSecret && !uploadPreset) return null;
-  if (!/^[a-zA-Z0-9_-]+$/.test(cloudName) || !apiKey || !apiSecret) {
-    throw new Error('Configurazione Cloudinary incompleta o non valida.');
+  const missing = [
+    !cloudName && 'CLOUDINARY_CLOUD_NAME',
+    !apiKey && 'CLOUDINARY_API_KEY',
+    !apiSecret && 'CLOUDINARY_API_SECRET',
+  ].filter(Boolean);
+  if (missing.length) {
+    throw new Error(`Configurazione Cloudinary incompleta. Variabili mancanti: ${missing.join(', ')}.`);
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(cloudName)) {
+    throw new Error('CLOUDINARY_CLOUD_NAME non valida. Inserisci solo il nome del cloud, senza URL.');
   }
 
   return { cloudName, apiKey, apiSecret, uploadPreset };

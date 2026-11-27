@@ -4,12 +4,12 @@ import { getCloudinaryConfig, signProductImageUpload } from '../src/lib/cloudina
 
 test('missing Cloudinary settings preserve the Supabase Storage fallback', () => {
   assert.equal(getCloudinaryConfig({}), null);
-  assert.throws(() => getCloudinaryConfig({ CLOUDINARY_CLOUD_NAME: 'dream-test' }), /incompleta/);
+  assert.throws(() => getCloudinaryConfig({ CLOUDINARY_CLOUD_NAME: 'dream-test' }), /CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET/);
   assert.throws(() => getCloudinaryConfig({
     CLOUDINARY_CLOUD_NAME: 'invalid/name',
     CLOUDINARY_API_KEY: 'key-test',
     CLOUDINARY_API_SECRET: 'secret-test',
-  }), /non valida/);
+  }), /CLOUDINARY_CLOUD_NAME non valida/);
 });
 
 test('product images get a SHA-256 signature for a unique non-overwriting upload', () => {

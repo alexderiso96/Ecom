@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { SeedButton } from '@/components/admin/SeedButton';
 import { validateProductInput, validateImageFile } from '@/lib/validation';
+import { uploadCloudinaryImage } from '@/lib/cloudinary-upload';
 import type { ImageUploadTarget } from '@/lib/cloudinary';
 
 export default function AdminProductsPage() {
@@ -42,6 +43,7 @@ export default function AdminProductsPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -74,6 +76,7 @@ export default function AdminProductsPage() {
     setStock('10');
     setImageUrl('');
     setImages([]);
+    setUploadError(null);
     setInputImageUrl('');
     setIsFeatured(false);
     setIsActive(true);
@@ -95,6 +98,7 @@ export default function AdminProductsPage() {
     const productImages = getProductImageUrls(p);
     setImageUrl(productImages[0] || '');
     setImages(productImages);
+    setUploadError(null);
     setInputImageUrl('');
     setIsFeatured(p.is_featured);
     setIsActive(p.is_active);
@@ -118,13 +122,13 @@ export default function AdminProductsPage() {
     for (const file of files) {
       const validation = validateImageFile(file);
       if (!validation.valid) {
-        setErrorMsg(validation.error || 'Uno o più file non sono validi.');
+        setUploadError(validation.error || 'Uno o più file non sono validi.');
         return;
       }
     }
 
     setUploadingFile(true);
-    setErrorMsg(null);
+    setUploadError(null);
     const uploadedUrls: string[] = [];
     let failedFile = '';
 
@@ -135,21 +139,14 @@ export default function AdminProductsPage() {
       for (const file of files) {
         failedFile = file.name;
         const authorization = await fetch('/api/admin/media/sign', { method: 'POST' });
-        const target = await authorization.json() as ImageUploadTarget | { error: string };
-        if ('error' in target) throw new Error(target.error);
-        if (!authorization.ok) throw new Error('Autorizzazione al caricamento non disponibile.');
+        const target = await authorization.json().catch(() => null) as ImageUploadTarget | { error: string } | null;
+        if (target && 'error' in target) throw new Error(target.error);
+        if (!authorization.ok || !target) {
+          throw new Error(`Autorizzazione al caricamento non disponibile (HTTP ${authorization.status}).`);
+        }
 
         if (target.provider === 'cloudinary') {
-          const form = new FormData();
-          Object.entries(target.fields).forEach(([key, value]) => form.append(key, value));
-          form.append('file', file);
-
-          const response = await fetch(target.endpoint, { method: 'POST', body: form });
-          const result = await response.json();
-          if (!response.ok || typeof result.secure_url !== 'string' || !result.secure_url.startsWith('https://')) {
-            throw new Error('Cloudinary ha rifiutato il caricamento. Verifica le credenziali e le impostazioni del preset.');
-          }
-          uploadedUrls.push(result.secure_url);
+          uploadedUrls.push(await uploadCloudinaryImage(file, target));
         } else {
           const extension = file.name.split('.').pop()?.toLowerCase();
           const path = `products/${crypto.randomUUID()}.${extension}`;
@@ -160,7 +157,7 @@ export default function AdminProductsPage() {
       }
     } catch (error) {
       const detail = error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Errore di caricamento.';
-      setErrorMsg(`Impossibile caricare ${failedFile}: ${detail}${uploadedUrls.length ? ' Le foto già caricate sono nella galleria.' : ''}`);
+      setUploadError(`Impossibile caricare ${failedFile}: ${detail}${uploadedUrls.length ? ' Le foto già caricate sono nella galleria.' : ''}`);
     } finally {
       if (uploadedUrls.length) {
         setImages((previous) => [...previous, ...uploadedUrls]);
@@ -174,14 +171,14 @@ export default function AdminProductsPage() {
     const trimmed = inputImageUrl.trim();
     if (!trimmed) return;
     if (!trimmed.startsWith('https://') && !trimmed.startsWith('/') && !trimmed.startsWith('http://localhost')) {
-      setErrorMsg('L\'URL dell\'immagine deve iniziare con https:// o percorso relativo.');
+      setUploadError('L\'URL dell\'immagine deve iniziare con https:// o percorso relativo.');
       return;
     }
     if (images.includes(trimmed)) {
-      setErrorMsg('Questa immagine è già presente nella galleria del prodotto.');
+      setUploadError('Questa immagine è già presente nella galleria del prodotto.');
       return;
     }
-    setErrorMsg(null);
+    setUploadError(null);
     setImages((prev) => {
       const updated = [...prev, trimmed];
       if (!imageUrl) setImageUrl(trimmed);
@@ -553,10 +550,10 @@ export default function AdminProductsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <div>
                 <span className="block text-xs font-bold text-stone-800 dark:text-stone-200">
-                  Galleria Fotografica ({images.length} {images.length === 1 ? 'foto' : 'foto'})
+                  Galleria fotografica ({images.length} foto)
                 </span>
                 <p className="text-[11px] text-stone-500">
-                  Carica una o più foto (puoi selezionare più file insieme). La foto contrassegnata dalla stella è la copertina.
+                  JPG, PNG, WebP o AVIF, fino a 5 MB per foto. La stella indica la copertina.
                 </p>
               </div>
               {images.length > 0 && (
@@ -604,6 +601,13 @@ export default function AdminProductsPage() {
                 </button>
               </div>
             </div>
+
+            {uploadError && (
+              <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+                <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                {uploadError}
+              </p>
+            )}
 
             {/* Griglia Miniature delle Foto */}
             {images.length > 0 ? (
